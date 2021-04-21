@@ -57,7 +57,7 @@ class Action
     /**
      * @return array
      */
-    public function getCallback(): array {
+    public function getCallback() {
         return $this->callback;
     }
 

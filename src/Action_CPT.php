@@ -12,11 +12,10 @@ class Action_CPT
     public static function register_post_type() {
 
         register_post_type( "secure_action", [
-            "public" => true,
+            "public" => false,
             "hierarchical" => false,
             "supports" => [
                 "title",
-                "editor",
                 "custom-fields"
             ],
             "has_archive" => false,

@@ -34,7 +34,7 @@ class Manager
         foreach($query->posts as $post) {
 
             $delete = false;
-            $action = maybe_unserialize($post->post_content);
+            $action = self::decode_action($post->post_content);
             if (!$action || !$action instanceof Action) {
                 wp_delete_post( $post->ID, true );
                 continue;
@@ -80,7 +80,7 @@ class Manager
 
             if (empty($wp_hasher)) {
                 require_once ABSPATH . WPINC . '/class-phpass.php';
-                $wp_hasher = new PasswordHash(8, true);
+                $wp_hasher = new \PasswordHash(8, true);
             }
         }
 
@@ -90,23 +90,22 @@ class Manager
         $id = wp_insert_post(
             array(
                 'post_title'   => $name,
-                'post_type'    => 'secure_actions',
+                'post_type'    => 'secure_action',
                 'post_status'  => 'publish',
-                'post_content' => serialize($action),
+                'post_content' => self::encode_action($action),
             ),
             true
         );
 
         if (is_wp_error($id)) {
-            return new \WP_Error("secure_action_error", "Creating post for key $key failed");
+            return new \WP_Error("secure_action_error", "Creating secure action post failed");
         }
 
         // Add post password -> id combined with key for easier identification
-        $hashed = $id . ':' . $wp_hasher->HashPassword($key);
-        $id = wp_insert_post(
+        $id = wp_update_post(
             array(
-                'id'            => $id,
-                'post_password' => $hashed,
+                'ID'            => $id,
+                'post_password' => $wp_hasher->HashPassword($key),
             ),
             true
         );
@@ -116,12 +115,20 @@ class Manager
             return new \WP_Error("secure_action_error", "Post Password for id $id could not be set.");
         }
 
-        return $hashed;
+        return base64_encode($id . ':' . $key);
 
     }
 
+    /**
+     * @param string $key
+     * @return \WP_Error
+     * @throws \Exception
+     */
     public static function execute_action(string $key) {
         global $wp_hasher;
+
+        // decode key
+        $key = base64_decode($key);
 
         // Split key by :
         list( $id, $key ) = explode( ':', $key, 2 );
@@ -129,40 +136,39 @@ class Manager
         // Get action post object
         $post = get_post($id);
         if (!$post || !$post instanceof \WP_Post) {
-            return WP_Error("secure_action_error", "Action does not exist");
+            return \WP_Error("secure_action_error", "Action does not exist");
         }
 
         // Verify key
-        $saved_key = $post->post_password;
         if (empty($wp_hasher)) {
             require_once ABSPATH . WPINC . '/class-phpass.php';
             $wp_hasher = new PasswordHash(8, true);
         }
-        if (!$wp_hasher->CheckPassword($key, $saved_key)) {
-            return new WP_Error('invalid_key', __('The confirmation key is invalid for this secure action.'));
+        if (! $wp_hasher->CheckPassword($key, $post->post_password)) {
+            return new \WP_Error('invalid_key', __('The confirmation key is invalid for this secure action.'));
         }
 
         // Get Action object
-        $action = maybe_unserialize($post->post_content);
+        $action = self::decode_action($post->post_content);
         if (!$action || !$action instanceof Action) {
-            return WP_Error("secure_action_error", "Post with id $id does not contain valid action information");
+            return \WP_Error("secure_action_error", "Post with id $id does not contain valid action information");
         }
 
         // Check if expiration is reached
         if ( $action->isExpired(new \DateTimeImmutable($post->post_date, wp_timezone())) ) {
             wp_delete_post( $id, true );
-            return new WP_Error('secure_action_limit', __('The action expired.'));
+            return new \WP_Error('secure_action_limit', __('The action expired.'));
         }
 
         // Check if count limit is reached
         if ($action->isLimitReached()) {
             wp_delete_post( $id, true );
-            return new WP_Error('secure_action_limit', __('The actions limit was exceeded.'));
+            return new \WP_Error('secure_action_limit', __('The actions limit was exceeded.'));
         }
 
         // Execute callback
         if (!is_callable($action->getCallback())) {
-            return new WP_Error('secure_action_callback', __('The actions callback is not callable.'));
+            return new \WP_Error('secure_action_callback', __('The actions callback is not callable.'));
         }
         call_user_func_array($action->getCallback(), $action->getArgs());
 
@@ -170,10 +176,10 @@ class Manager
         $action->setCount($action->getCount()+1);
 
         // Update secure action
-        $id = wp_insert_post(
+        $id = wp_update_post(
             array(
-                'id'            => $id,
-                'post_content' => serialize($action),
+                'ID'            => $id,
+                'post_content' => self::encode_action($action),
             ),
             true
         );
@@ -181,6 +187,24 @@ class Manager
         if (is_wp_error($id)) {
             return new \WP_Error("secure_action_update_error", "Action with id $id could not be updated.");
         }
+    }
+
+    /**
+     * Serializes and encodes transport object so it passes the wordpress filters
+     *
+     * @param Action $action
+     * @return string
+     */
+    private function encode_action(Action $action): string {
+        return base64_encode(serialize($action));
+    }
+
+    /**
+     * @param string $action
+     * @return Action
+     */
+    private function decode_action(string $action): Action {
+        return unserialize(base64_decode($action));
     }
 
 }

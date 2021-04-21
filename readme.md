@@ -19,7 +19,7 @@ any `secure_action` posts have expired or reached their limit and deletes it.
 ```php
 add_action( 'init', 'init_secure_actions' );  
 function init_secure_actions() {  
- Manager::init();  
+    Manager::init();  
 }
 ``` 
 
