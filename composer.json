@@ -2,9 +2,9 @@
     "name": "juvo/wp-secure-actions",
     "description": "Framework to securely handle verifiable actions in wordpress",
     "keywords"    : [ "wordpress", "actions"],
+    "license": "GPL-3.0-or-later",
     "require": {
-        "php": ">=7.2.0",
-        "wptrt/admin-notices": "^1.0"
+        "php": ">=7.2.0"
     },
     "support"     : {
         "issues" : "https://github.com/JUVOJustin/wp-secure-actions/issues"
