@@ -9,9 +9,10 @@ the generation of onetimelinks, handling downloads or e-mail logins for users.
 |---|---|---|---|
 | `$name`| `string` | Required | Unique name to identify the action e.g. in filters |
 | `$callback`| `string` `array` | Required | Callback action to execution whenever the action is triggered. |
-| `$args` | `array` | Optional| The parameters to be passed to the callback, as an indexed array. Defaults to an empty array. |
-| `$expiration` | `int` | Optional| Action expiration interval in seconds. Defaults to -1. |
-| `$limit` | `int` | Optional | Action execution limit. Defaults to -1. |
+| `$args` | `array` | Optional| The parameters to be passed to the callback, as an indexed array. Defaults to `array()`. |
+| `$expiration` | `int` | Optional| Action expiration interval in seconds. Defaults to `-1`. |
+| `$limit` | `int` | Optional | Action execution limit. Defaults to `-1`. |
+| `$persistent` | `bool` | Optional | Determines if an action should be deleted when expired or limit reached. Defaults to `false`. |
 
 The init function registers the custom post type `secure_action`. Also it calls a cleanup function which checks if
 any `secure_action` posts have expired or reached their limit and deletes it.
@@ -23,8 +24,7 @@ function init_secure_actions() {
 }
 ``` 
 
-In some cases this is bad behaviour e.g. for downloads. You can use the following filter to exclude certain actions or
-completely disable the cleanup:
+In some cases you want to change the cleanup functions behaviour. The following examples demonstrate how to use the `secure_action_cleanup` filter.
 ```php
 // Disable cleanup
 add_filter( 'secure_action_cleanup', function() {
