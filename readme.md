@@ -15,10 +15,10 @@ the generation of onetimelinks, handling downloads or e-mail logins for users.
 | `$persistent` | `bool` | Optional | Determines if an action should be deleted when expired or limit reached. Defaults to `false`. |
 
 The init function registers a cleanup cron job which checks if
-any secure_actions have expired or reached their limit and deletes it.
+any secure_actions have expired or reached their limit and maybe deletes it. The function is also responssible for creating the database table. A good place to call it would be inside the `register_activation_hook`.
 
 ```php
-register_deactivation_hook(__FILE__, function()  {
+register_activation_hook(__FILE__, function()  {
     \WordPressSecureActions\Manager::init();
 });
 ``` 
@@ -46,11 +46,16 @@ This example creates an action that sends an email to users who updated their pr
 add_action( 'profile_update', 'create_action', 10, 2 );  
 function create_action( $user_id, $old_user_data ) { 
     $user = get_userdata( $user_id ); 
-    $key = Manager::add_action("send_mail_$user_id", "wp_mail",[
-        $user->user_email,  
-        "Secure action executed", "The secure action was executed successfully." 
+    $key = Manager::add_action(
+        "send_mail_$user_id", // name
+        "wp_mail", // callback
+        [
+            $user->user_email, // arg1
+            "Secure action executed", // arg2
+             "The secure action was executed successfully." // arg3
         ]
     );     
+    
     // Execute the stored action any time later  
     Manager::execute_action($key);  
 }  
