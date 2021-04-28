@@ -14,14 +14,13 @@ the generation of onetimelinks, handling downloads or e-mail logins for users.
 | `$limit` | `int` | Optional | Action execution limit. Defaults to `-1`. |
 | `$persistent` | `bool` | Optional | Determines if an action should be deleted when expired or limit reached. Defaults to `false`. |
 
-The init function registers the custom post type `secure_action`. Also it calls a cleanup function which checks if
-any `secure_action` posts have expired or reached their limit and deletes it.
+The init function registers a cleanup cron job which checks if
+any secure_actions have expired or reached their limit and deletes it.
 
 ```php
-add_action( 'init', 'init_secure_actions' );  
-function init_secure_actions() {  
-    Manager::init();  
-}
+register_deactivation_hook(__FILE__, function()  {
+    \WordPressSecureActions\Manager::init();
+});
 ``` 
 
 In some cases you want to change the cleanup functions behaviour. The following examples demonstrate how to use the `secure_action_cleanup` filter.

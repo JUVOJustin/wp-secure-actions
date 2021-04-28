@@ -7,7 +7,20 @@ namespace WordPressSecureActions;
 class Action
 {
 
-    private $post;
+    /**
+     * @var int
+     */
+    private $id;
+
+    /**
+     * @var string
+     */
+    private $password;
+
+    /**
+     * @var string User friendly name to identify the action
+     */
+    private $name;
 
     /**
      * @var array|string Callback Action to execution whenever action is triggered
@@ -35,26 +48,53 @@ class Action
     private $expiration;
 
     /**
+     * @var \DateTimeImmutable date when the action was created
+     */
+    private $created_at;
+
+    /**
      * @var bool determines if action should be deleted when expired or limit reached
      */
     private $persistent;
 
     /**
      * Action constructor.
-     * @param \WP_Post $post
+     * @param int $id
+     * @param string $password
+     * @param string $name
+     * @param array|string $callback
+     * @param array $args
+     * @param int $limit
+     * @param int $count
+     * @param int $expiration
+     * @param \DateTimeImmutable $created_at
+     * @param bool $persistent
      */
-    public function __construct(\WP_Post $post) {
+    public function __construct(int $id, string $password, string $name, $callback, array $args, int $limit, int $count, int $expiration, \DateTimeImmutable $created_at, bool $persistent) {
+        $this->id = $id;
+        $this->password = $password;
+        $this->name = $name;
+        $this->callback = $callback;
+        $this->args = $args;
+        $this->limit = $limit;
+        $this->count = $count;
+        $this->expiration = $expiration;
+        $this->created_at = $created_at;
+        $this->persistent = $persistent;
+    }
 
-        $this->post = $post;
+    /**
+     * @return \DateTimeImmutable
+     */
+    public function getCreatedAt(): \DateTimeImmutable {
+        return $this->created_at;
+    }
 
-        $meta = get_post_meta($post->ID);
-
-        $this->callback = maybe_unserialize($meta["callback"][0]);
-        $this->args = maybe_unserialize($meta["args"][0]);
-        $this->limit = $meta["limit"][0];
-        $this->count = $meta["count"][0];
-        $this->expiration = $meta["expiration"][0];
-        $this->persistent = boolval($meta["persistent"][0]);
+    /**
+     * @return string
+     */
+    public function getPassword(): string {
+        return $this->password;
     }
 
     /**
@@ -106,7 +146,21 @@ class Action
      */
     public function setCount(int $count) {
         $this->count = $count;
-        return update_post_meta($this->post->ID, "count", $this->count);
+        return $count;
+    }
+
+    /**
+     * @return int
+     */
+    public function getId(): int {
+        return $this->id;
+    }
+
+    /**
+     * @return string
+     */
+    public function getName(): string {
+        return $this->name;
     }
 
     /**
@@ -126,9 +180,8 @@ class Action
             return false;
         }
 
-        $date = new \DateTimeImmutable($this->post->post_date, wp_timezone());
         $expiration = new \DateInterval('PT' . $this->getExpiration() . 'S');
-        if (new \DateTimeImmutable("now", wp_timezone()) > $date->add($expiration)) {
+        if (new \DateTimeImmutable("now", wp_timezone()) > $this->getCreatedAt()->add($expiration)) {
             return true;
         }
         return false;

@@ -9,8 +9,7 @@ class Manager
 
     public static function init() {
 
-        // Add post type
-        Action_CPT::register_post_type();
+        Database::addTable();
 
         // Register cron to cleanup secure actions
         if (!wp_next_scheduled('secure_actions_cleanup')) {
@@ -42,45 +41,16 @@ class Manager
                 $wp_hasher = new \PasswordHash(8, true);
             }
         }
+        $password = $wp_hasher->HashPassword($key);
 
-        // Initial secure action post
-        $id = wp_insert_post(
-            array(
-                'post_title'   => $name,
-                'post_type'    => 'secure_action',
-                'post_status'  => 'publish',
-                'post_content' => '',
-                'meta_input'   => array(
-                    'callback'   => $callback,
-                    'args'       => $args,
-                    'limit'      => $limit,
-                    'count'      => 0,
-                    'expiration' => $expiration,
-                    'persistent' => $persistent
-                )
-            ),
-            true
-        );
+        $database = new Database();
+        $action = $database->replaceAction($password, $name, $callback, $args, $limit, 0, $expiration, new \DateTimeImmutable("now", wp_timezone()), $persistent);
 
-        if (is_wp_error($id)) {
-            return new \WP_Error("secure_action_error", "Creating secure action post failed");
+        if (is_wp_error($action)) {
+            return new \WP_Error("secure_action_error", "Creating secure action failed");
         }
 
-        // Add post password -> id combined with key for easier identification
-        $id = wp_update_post(
-            array(
-                'ID'            => $id,
-                'post_password' => $wp_hasher->HashPassword($key),
-            ),
-            true
-        );
-
-        if (is_wp_error($id)) {
-            wp_delete_post($id, true);
-            return new \WP_Error("secure_action_error", "Post Password for id $id could not be set.");
-        }
-
-        return $id . ':' . $key;
+        return $action->getId() . ':' . $key;
 
     }
 
@@ -95,10 +65,11 @@ class Manager
         // Split key by :
         list($id, $key) = explode(':', $key, 2);
 
-        // Get action post object
-        $post = get_post($id);
-        if (!$post || !$post instanceof \WP_Post) {
-            return \WP_Error("secure_action_error", "Action does not exist");
+        // Get action
+        $database = new Database();
+        $action = $database->getAction($id);
+        if (is_wp_error($action)) {
+            return $action;
         }
 
         // Verify key
@@ -106,25 +77,19 @@ class Manager
             require_once ABSPATH . WPINC . '/class-phpass.php';
             $wp_hasher = new PasswordHash(8, true);
         }
-        if (!$wp_hasher->CheckPassword($key, $post->post_password)) {
+        if (!$wp_hasher->CheckPassword($key, $action->getPassword())) {
             return new \WP_Error('invalid_key', __('The confirmation key is invalid for this secure action.'));
-        }
-
-        // Get Action object
-        $action = new Action($post);
-        if (!$action || !$action instanceof Action) {
-            return \WP_Error("secure_action_error", "Post with id $id does not contain valid action information");
         }
 
         // Check if expiration is reached
         if ($action->isExpired()) {
-            wp_delete_post($id, true);
+            $database->deleteAction($action);
             return new \WP_Error('secure_action_limit', __('The action expired.'));
         }
 
         // Check if count limit is reached
         if ($action->isLimitReached()) {
-            wp_delete_post($id, true);
+            $database->deleteAction($action);
             return new \WP_Error('secure_action_limit', __('The actions limit was exceeded.'));
         }
 
@@ -140,39 +105,24 @@ class Manager
         } else {
             
             // Increment count
-            $count = $action->setCount($action->getCount() + 1);
+            $action->setCount($action->getCount() + 1);
+            $database->updateAction($action);
 
-            if (!$count) {
-                return new \WP_Error("secure_action_update_error", "Action with id $id could not be updated.");
-            }
-            
             return $val;
         };
     }
 
     public function secure_actions_cleanup() {
 
-        $args = array(
-            'post_type'      => 'secure_action',
-            'posts_per_page' => -1
-        );
-        $query = new \WP_Query($args);
+        $database = new Database();
 
-        if (!$query->have_posts()) {
-            return;
-        }
-
-        foreach ($query->posts as $post) {
+        foreach ($database->getAllActions() as $action) {
 
             $delete = false;
-            $action = new Action($post);
-            if (!$action || !$action instanceof Action) {
-                wp_delete_post($post->ID, true);
-                continue;
-            }
 
             // Check if expiration is reached
-            if ($action->isExpired(new \DateTimeImmutable($post->post_date, wp_timezone()))) {
+            // todo implement creation date
+            if ($action->isExpired()) {
                 $delete = true;
             }
 
@@ -190,7 +140,7 @@ class Manager
             $delete = apply_filters("secure_action_cleanup", $delete, $action, $post->post_title);
 
             if ($delete) {
-                wp_delete_post($post->ID, true);
+                $database->deleteAction($action);
             }
 
         }
