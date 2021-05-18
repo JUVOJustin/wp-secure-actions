@@ -1,4 +1,4 @@
-name: PHP Composer
+name: PHP Test/Analyse
 
 on:
   push:
@@ -29,11 +29,5 @@ jobs:
     - name: Install dependencies
       run: composer install --prefer-dist --no-progress --dev
       
-  tests:
-
-    runs-on: ubuntu-latest
-
-    steps:
-    
     - name: PHPSTAN
       run: vendor/bin/phpstan analyse src
