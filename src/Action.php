@@ -112,7 +112,7 @@ class Action
     }
 
     /**
-     * @return array
+     * @return array|string
      */
     public function getCallback() {
         return $this->callback;
@@ -142,9 +142,9 @@ class Action
 
     /**
      * @param int $count
-     * @return bool|int
+     * @return int
      */
-    public function setCount(int $count) {
+    public function setCount(int $count): int {
         $this->count = $count;
         return $count;
     }
