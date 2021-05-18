@@ -26,9 +26,9 @@ class Manager
      * @param int $limit
      * @param string $key
      * @param bool $persistent
-     * @return \WP_Error
+     * @return \WP_Error|string
      */
-    public static function add_action(string $name, $callback, array $args = [], int $expiration = -1, int $limit = -1, bool $persistent = false, string $key = "") {
+    public static function addAction(string $name, $callback, array $args = [], int $expiration = -1, int $limit = -1, bool $persistent = false, string $key = "") {
 
         // Generate key if none passed
         if (empty($key)) {
@@ -59,7 +59,7 @@ class Manager
      * @return \WP_Error
      * @throws \Exception
      */
-    public static function execute_action(string $key) {
+    public static function executeAction(string $key) {
         global $wp_hasher;
 
         // Split key by :
@@ -67,7 +67,7 @@ class Manager
 
         // Get action
         $database = new Database();
-        $action = $database->getAction($id);
+        $action = $database->getAction(intval($id));
         if (is_wp_error($action)) {
             return $action;
         }
@@ -105,7 +105,7 @@ class Manager
         return call_user_func_array($action->getCallback(), $action->getArgs());
     }
 
-    public function secure_actions_cleanup() {
+    public function secureActionsCleanup() {
 
         $database = new Database();
 
@@ -123,14 +123,14 @@ class Manager
             if ($action->isLimitReached()) {
                 $delete = true;
             }
-            
+
             // If is persistent action do not delete
             if ($action->isPersistent()) {
                 $delete = false;
             }
 
             // Apply secure_action_cleanup filters
-            $delete = apply_filters("secure_action_cleanup", $delete, $action, $post->post_title);
+            $delete = apply_filters("secure_action_cleanup", $delete, $action, $action->getName());
 
             if ($delete) {
                 $database->deleteAction($action);
