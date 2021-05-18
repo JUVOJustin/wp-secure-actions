@@ -31,8 +31,8 @@ add_filter( 'secure_action_cleanup', function() {
 }, 10, 3 );
 
 // Exclude based on name
-add_filter( 'secure_action_cleanup', 'whitelist_actions', 10, 3 );  
-function whitelist_actions(bool $delete, Action $action, string $name) {  
+add_filter( 'secure_action_cleanup', 'whitelistActions', 10, 3 );  
+function whitelistActions(bool $delete, Action $action, string $name) {  
     if ($name === "my_action") {
         return false;
     }
@@ -43,10 +43,10 @@ function whitelist_actions(bool $delete, Action $action, string $name) {
 This example creates an action that sends an email to users who updated their profile. In this example the action is executed immediatly but you can execute it any time later within its expiration interval.
 ```php
 // Create action at any time after init hook was executed  
-add_action( 'profile_update', 'create_action', 10, 2 );  
-function create_action( $user_id, $old_user_data ) { 
+add_action( 'profile_update', 'createAction', 10, 2 );  
+function createAction( $user_id, $old_user_data ) { 
     $user = get_userdata( $user_id ); 
-    $key = Manager::add_action(
+    $key = Manager::addAction(
         "send_mail_$user_id", // name
         "wp_mail", // callback
         [
@@ -57,7 +57,7 @@ function create_action( $user_id, $old_user_data ) {
     );     
     
     // Execute the stored action any time later  
-    Manager::execute_action($key);  
+    Manager::executeAction($key);  
 }  
 ```  
 
