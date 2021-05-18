@@ -8,7 +8,6 @@ class Database
 {
 
     const TABLENAME = "secure_actions";
-    const CACHE_PREFIX = "secure_actions_";
     private $wpdb;
     private $table;
 
@@ -132,9 +131,6 @@ class Database
             return new \WP_Error("error_replacing_secure_action", $this->wpdb->last_error);
         }
 
-        // Update cache for singular action
-        wp_cache_replace(self::CACHE_PREFIX . $action->getId(), $action);
-
         return $action;
 
     }
@@ -147,19 +143,12 @@ class Database
      */
     public function getAction(int $id) {
 
-        $result = wp_cache_get(self::CACHE_PREFIX . $id);
-        if (false === $result) {
-
-            $query = "SELECT * FROM {$this->table} WHERE id = $id";
-            $result = $this->wpdb->get_row($query);
-            if ($result !== null) {
-                $result = $this->resultRowToAction($result);
-                // Save result to cache
-                wp_cache_set(self::CACHE_PREFIX . $id, $result);
-            } else {
-                return new \WP_Error("error_getting_secure_action", $this->wpdb->last_error);
-            }
-
+        $query = "SELECT * FROM {$this->table} WHERE id = $id";
+        $result = $this->wpdb->get_row($query);
+        if ($result !== null) {
+            $result = $this->resultRowToAction($result);
+        } else {
+            return new \WP_Error("error_getting_secure_action", $this->wpdb->last_error);
         }
 
         return $result;
@@ -206,8 +195,6 @@ class Database
             return new \WP_Error("error_deleting_secure_action", $this->wpdb->last_error);
         }
 
-        // Delete cache when action is deleted
-        wp_cache_delete(self::CACHE_PREFIX . $action->getId());
     }
 
     /**
