@@ -34,7 +34,7 @@ class Manager
         if (empty($key)) {
             global $wp_hasher;
 
-            $key = wp_generate_password(20, false);
+            $key = wp_generate_password(28, false);
 
             if (empty($wp_hasher)) {
                 require_once ABSPATH . WPINC . '/class-phpass.php';
@@ -75,7 +75,7 @@ class Manager
         // Verify key
         if (empty($wp_hasher)) {
             require_once ABSPATH . WPINC . '/class-phpass.php';
-            $wp_hasher = new PasswordHash(8, true);
+            $wp_hasher = new \PasswordHash(8, true);
         }
         if (!$wp_hasher->CheckPassword($key, $action->getPassword())) {
             return new \WP_Error('invalid_key', __('The confirmation key is invalid for this secure action.'));
@@ -97,19 +97,12 @@ class Manager
         if (!is_callable($action->getCallback())) {
             return new \WP_Error('secure_action_callback', __('The actions callback is not callable.'));
         }
-        $val = call_user_func_array($action->getCallback(), $action->getArgs());
-        
-        // Handle callback return value
-        if($val === false || is_wp_error($val)) {
-            return new \WP_Error('secure_action_callback', __('The actions callback execution failed.'));
-        } else {
-            
-            // Increment count
-            $action->setCount($action->getCount() + 1);
-            $database->updateAction($action);
 
-            return $val;
-        };
+        // Increment count
+        $action->setCount($action->getCount() + 1);
+        $database->updateAction($action);
+
+        return call_user_func_array($action->getCallback(), $action->getArgs());
     }
 
     public function secure_actions_cleanup() {
