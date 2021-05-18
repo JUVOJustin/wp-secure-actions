@@ -13,7 +13,6 @@ class Database
 
     /**
      * Database constructor.
-     * @param $wpdb
      */
     public function __construct() {
         $this->wpdb = $GLOBALS["wpdb"];
@@ -21,7 +20,7 @@ class Database
     }
 
 
-    public static function addTable() {
+    public static function addTable(): void {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLENAME;
@@ -50,11 +49,11 @@ class Database
      *
      * @param string $password
      * @param string $name
-     * @param $callback
-     * @param $args
+     * @param array|string $callback
+     * @param array $args
      * @param int $limit
      * @param int $count
-     * @param \DateTimeImmutable $expiration
+     * @param int $expiration
      * @param bool $persistent
      * @return Action|\WP_Error
      */
@@ -143,8 +142,9 @@ class Database
      */
     public function getAction(int $id) {
 
-        $query = "SELECT * FROM {$this->table} WHERE id = $id";
+        $query = $this->wpdb->prepare( "SELECT * FROM {$this->table} WHERE id = %d", $id );
         $result = $this->wpdb->get_row($query);
+
         if ($result !== null) {
             $result = $this->resultRowToAction($result);
         } else {
@@ -158,30 +158,28 @@ class Database
     /**
      * Get all secure_action entries
      *
-     * @return array|\WP_Error
+     * @return Action[]|\WP_Error
      */
     public function getAllActions() {
 
-        $results = $this->wpdb->get_results(
-            $this->wpdb->prepare("SELECT * FROM {$this->table}")
-        );
+        $query = $this->wpdb->prepare("SELECT * FROM {$this->table}");
 
-        if (empty($results)) {
-            return new \WP_Error("error_selecting_all_secure_action", $this->wpdb->last_error);
+        $result = $this->wpdb->dbh->query($query);
+        if (!$result) {
+            return new \WP_Error("error_selecting_all_secure_action", $this->wpdb->dbh->error);
         }
 
-        foreach ($results as &$result) {
-            $result = $this->resultRowToAction($result);
+        /* fetch object array */
+        while ($row = $result->fetch_object()) {
+           yield $this->resultRowToAction($row);
         }
-
-        return $results;
     }
 
     /**
      * Delete a single secure_action entry from database
      *
      * @param Action $action
-     * @return \WP_Error
+     * @return \WP_Error|bool
      */
     public function deleteAction(Action $action) {
 
@@ -194,7 +192,8 @@ class Database
         if (!empty($this->wpdb->last_error)) {
             return new \WP_Error("error_deleting_secure_action", $this->wpdb->last_error);
         }
-
+        
+        return true;
     }
 
     /**
