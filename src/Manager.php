@@ -62,12 +62,7 @@ class Manager
     public static function executeAction(string $key) {
         global $wp_hasher;
 
-        // Split key by :
-        list($id, $key) = explode(':', $key, 2);
-
-        // Get action
-        $database = new Database();
-        $action = $database->getAction(intval($id));
+        $action = self::getAction($key);
         if (is_wp_error($action)) {
             return $action;
         }
@@ -80,6 +75,8 @@ class Manager
         if (!$wp_hasher->CheckPassword($key, $action->getPassword())) {
             return new \WP_Error('invalid_key', __('The confirmation key is invalid for this secure action.'));
         }
+
+        $database = new Database();
 
         // Check if expiration is reached
         if ($action->isExpired()) {
@@ -103,6 +100,19 @@ class Manager
         $database->updateAction($action);
 
         return call_user_func_array($action->getCallback(), $action->getArgs());
+    }
+
+    /**
+     * @param string $key
+     * @return Action|\WP_Error
+     */
+    public static function getAction(string $key) {
+        // Split key by :
+        list($id, $key) = explode(':', $key, 2);
+
+        // Get action
+        $database = new Database();
+        return $database->getAction(intval($id));
     }
 
     public static function secureActionsCleanup() {
