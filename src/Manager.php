@@ -1,7 +1,7 @@
 <?php
 
 
-namespace WordPressSecureActions;
+namespace juvo\WordPressSecureActions;
 
 
 class Manager
