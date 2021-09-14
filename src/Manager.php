@@ -47,7 +47,7 @@ class Manager
         $action = $database->replaceAction($password, $name, $callback, $args, $limit, 0, $expiration, new \DateTimeImmutable("now", wp_timezone()), $persistent);
 
         if (is_wp_error($action)) {
-            return new \WP_Error("secure_action_error", "Creating secure action failed");
+            return $action;
         }
 
         return $action->getId() . ':' . $key;
@@ -62,7 +62,10 @@ class Manager
     public static function executeAction(string $key) {
         global $wp_hasher;
 
-        $action = self::getAction($key);
+        // Split key by :
+        list($id, $key) = explode(':', $key, 2);
+
+        $action = self::getAction($id);
         if (is_wp_error($action)) {
             return $action;
         }
@@ -103,13 +106,10 @@ class Manager
     }
 
     /**
-     * @param string $key
+     * @param int $id
      * @return Action|\WP_Error
      */
-    public static function getAction(string $key) {
-        // Split key by :
-        list($id, $key) = explode(':', $key, 2);
-
+    public static function getAction(int $id) {
         // Get action
         $database = new Database();
         return $database->getAction(intval($id));

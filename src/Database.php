@@ -35,7 +35,7 @@ class Database
           `limit` int NOT NULL,
           `count` int NOT NULL,
           `expiration` BIGINT(20) NOT NULL,
-          `created_at` DATETIME NOT NULL
+          `created_at` DATETIME NOT NULL,
           `persistent` tinyint(1) DEFAULT 0 NOT NULL,
           PRIMARY KEY  (id)
         ) $charset_collate;";
@@ -162,9 +162,7 @@ class Database
      */
     public function getAllActions() {
 
-        $query = $this->wpdb->prepare("SELECT * FROM {$this->table}");
-
-        $result = $this->wpdb->dbh->query($query);
+        $result = $this->wpdb->dbh->query("SELECT * FROM {$this->table}");
         if (!$result) {
             return new \WP_Error("error_selecting_all_secure_action", $this->wpdb->dbh->error);
         }
