@@ -35,7 +35,7 @@ class Database
           `limit` int NOT NULL,
           `count` int NOT NULL,
           `expiration` BIGINT(20) NOT NULL,
-          `created_at` DATETIME NOT NULL
+          `created_at` DATETIME NOT NULL,
           `persistent` tinyint(1) DEFAULT 0 NOT NULL,
           PRIMARY KEY  (id)
         ) $charset_collate;";
