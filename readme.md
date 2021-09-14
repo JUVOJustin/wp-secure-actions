@@ -19,7 +19,7 @@ any secure_actions have expired or reached their limit and maybe deletes it. The
 
 ```php
 register_activation_hook(__FILE__, function()  {
-    \WordPressSecureActions\Manager::init();
+    \juvo\WordPressSecureActions\Manager::init();
 });
 ``` 
 
