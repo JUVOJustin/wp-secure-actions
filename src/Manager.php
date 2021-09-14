@@ -47,7 +47,7 @@ class Manager
         $action = $database->replaceAction($password, $name, $callback, $args, $limit, 0, $expiration, new \DateTimeImmutable("now", wp_timezone()), $persistent);
 
         if (is_wp_error($action)) {
-            return new \WP_Error("secure_action_error", "Creating secure action failed");
+            return $action;
         }
 
         return $action->getId() . ':' . $key;
