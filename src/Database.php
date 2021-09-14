@@ -162,9 +162,7 @@ class Database
      */
     public function getAllActions() {
 
-        $query = $this->wpdb->prepare("SELECT * FROM {$this->table}");
-
-        $result = $this->wpdb->dbh->query($query);
+        $result = $this->wpdb->dbh->query("SELECT * FROM {$this->table}");
         if (!$result) {
             return new \WP_Error("error_selecting_all_secure_action", $this->wpdb->dbh->error);
         }
