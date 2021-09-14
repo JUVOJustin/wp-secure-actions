@@ -65,7 +65,7 @@ class Manager
         // Split key by :
         list($id, $key) = explode(':', $key, 2);
 
-        $action = self::getAction($id);
+        $action = self::getAction(intval($id));
         if (is_wp_error($action)) {
             return $action;
         }
