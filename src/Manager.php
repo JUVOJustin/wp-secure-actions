@@ -7,15 +7,36 @@ namespace juvo\WordPressSecureActions;
 class Manager
 {
 
+    private static $instance = null;
+    private $database;
+
+    public static function getInstance()
+    {
+        if (self::$instance == null)
+        {
+            self::$instance = new Manager();
+        }
+
+        return self::$instance;
+    }
+
+    private function __construct() {
+        $this->database = new Database();
+    }
+
     public static function init() {
 
         Database::addTable();
 
         // Register cron to cleanup secure actions
-        if (!wp_next_scheduled('secure_actions_cleanup')) {
-            wp_schedule_event(strtotime('tomorrow'), 'daily', Manager::secureActionsCleanup());
+        if (!wp_next_scheduled('juvo_secure_actions_cleanup')) {
+            wp_schedule_event(strtotime('tomorrow'), 'daily', 'juvo_secure_actions_cleanup');
         }
 
+    }
+
+    public static function deactivate() {
+        wp_clear_scheduled_hook( 'juvo_secure_actions_cleanup' );
     }
 
     /**
@@ -28,7 +49,7 @@ class Manager
      * @param bool $persistent
      * @return \WP_Error|string
      */
-    public static function addAction(string $name, $callback, array $args = [], int $expiration = -1, int $limit = -1, bool $persistent = false, string $key = "") {
+    public function addAction(string $name, $callback, array $args = [], int $expiration = -1, int $limit = -1, bool $persistent = false, string $key = "") {
         global $wp_hasher;
 
         if (empty($wp_hasher)) {
@@ -43,8 +64,8 @@ class Manager
 
         $password = $wp_hasher->HashPassword($key);
 
-        $database = new Database();
-        $action = $database->replaceAction($password, $name, $callback, $args, $limit, 0, $expiration, new \DateTimeImmutable("now", wp_timezone()), $persistent);
+
+        $action = $this->database->replaceAction($password, $name, $callback, $args, $limit, 0, $expiration, new \DateTimeImmutable("now", wp_timezone()), $persistent);
 
         if (is_wp_error($action)) {
             return $action;
@@ -59,13 +80,13 @@ class Manager
      * @return \WP_Error
      * @throws \Exception
      */
-    public static function executeAction(string $key) {
+    public function executeAction(string $key) {
         global $wp_hasher;
 
         // Split key by :
         list($id, $key) = explode(':', $key, 2);
 
-        $action = self::getAction(intval($id));
+        $action = $this->getAction(intval($id));
         if (is_wp_error($action)) {
             return $action;
         }
@@ -79,17 +100,15 @@ class Manager
             return new \WP_Error('invalid_key', __('The confirmation key is invalid for this secure action.'));
         }
 
-        $database = new Database();
-
         // Check if expiration is reached
         if ($action->isExpired()) {
-            $database->deleteAction($action);
+            $this->database->deleteAction($action);
             return new \WP_Error('secure_action_limit', __('The action expired.'));
         }
 
         // Check if count limit is reached
         if ($action->isLimitReached()) {
-            $database->deleteAction($action);
+            $this->database->deleteAction($action);
             return new \WP_Error('secure_action_limit', __('The actions limit was exceeded.'));
         }
 
@@ -98,28 +117,31 @@ class Manager
             return new \WP_Error('secure_action_callback', __('The actions callback is not callable.'));
         }
 
-        // Increment count
-        $action->setCount($action->getCount() + 1);
-        $database->updateAction($action);
+        $result = call_user_func_array($action->getCallback(), $action->getArgs());
 
-        return call_user_func_array($action->getCallback(), $action->getArgs());
+        // Only increment counter if variable is no error nor false
+        if ($result && !is_wp_error($result)) {
+            // Increment count
+            $action->setCount($action->getCount() + 1);
+            $this->database->updateAction($action);
+        }
+
+        return $result;
+
     }
 
     /**
      * @param int $id
      * @return Action|\WP_Error
      */
-    public static function getAction(int $id) {
+    public function getAction(int $id) {
         // Get action
-        $database = new Database();
-        return $database->getAction(intval($id));
+        return $this->database->getAction(intval($id));
     }
 
-    public static function secureActionsCleanup() {
+    public function secureActionsCleanup() {
 
-        $database = new Database();
-
-        foreach ($database->getAllActions() as $action) {
+        foreach ($this->database->getAllActions() as $action) {
 
             $delete = false;
 
@@ -143,10 +165,31 @@ class Manager
             $delete = apply_filters("secure_action_cleanup", $delete, $action, $action->getName());
 
             if ($delete) {
-                $database->deleteAction($action);
+                $this->database->deleteAction($action);
             }
 
         }
+
+    }
+
+    /**
+     * @param int|Action $action
+     * @return bool|Action|\WP_Error
+     */
+    public function deleteAction($action) {
+
+        if (is_int($action)) {
+            $action = $this->getAction($action);
+        }
+
+        if (!$action instanceof Action) {
+            if (is_wp_error($action)) {
+                return $action;
+            }
+            return new \WP_Error('secure_action_delete', __('No valid action id or Action instance provided.'));
+        }
+
+        return $this->database->deleteAction($action);
 
     }
 
