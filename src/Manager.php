@@ -249,10 +249,10 @@ class Manager
     }
 
     /**
-     * @param $key
+     * @param string $key
      * @return string
      */
-    public function buildActionUrl($key): string {
+    public function buildActionUrl(string $key): string {
         return get_site_url() . "/sec-action/" . base64_encode($key);
     }
 
