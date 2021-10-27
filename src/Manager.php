@@ -10,8 +10,7 @@ class Manager
     private static $instance = null;
     private $database;
 
-    public static function getInstance()
-    {
+    public static function getInstance(): ?Manager {
         if (self::$instance == null)
         {
             self::$instance = new Manager();
@@ -21,11 +20,30 @@ class Manager
     }
 
     private function __construct() {
-        $this->database = new Database();
+
+        if ( !defined('ABSPATH') ) {
+            return;
+        }
+
+        // Make sure only loaded once
+        if ( class_exists('\WP') && !defined('SECURE_ACTIONS_LOADED') ) {
+            self::init();
+
+            add_action('juvo_secure_actions_cleanup', __NAMESPACE__.'\Manager::secureActionsCleanup');
+            add_action('init', array($this, "rewriteAddRewrites") );
+            add_action('query_vars', array($this, "rewriteAddVar") );
+            add_action('parse_query', array($this, "catchAction") );
+
+            $this->database = new Database();
+
+            define('SECURE_ACTIONS_LOADED', true);
+        }
+
     }
 
-    public static function init() {
+    public static function init(): void {
 
+        // Add database
         Database::addTable();
 
         // Register cron to cleanup secure actions
@@ -191,6 +209,51 @@ class Manager
 
         return $this->database->deleteAction($action);
 
+    }
+
+    /**
+     * Add secure downloads rewrite rule
+     */
+    public function rewriteAddRewrites(): void {
+        add_rewrite_rule(
+            'sec-action/(.+)[/]?$', // sec-action, with any following downloads
+            'index.php?sec-action=$matches[1]',
+            'top'
+        );
+    }
+
+    /**
+     * Add query var
+     *
+     * @param array $vars
+     * @return array
+     */
+    public function rewriteAddVar(array $vars): array {
+        $vars[] = 'sec-action';
+        return $vars;
+    }
+
+    /**
+     * Executes Secure Action by key passed with sec-d var
+     *
+     * @throws \Exception
+     */
+    public function catchAction(): void {
+
+        if ($key = get_query_var('sec-action')) {
+            (Manager::getInstance())->executeAction(base64_decode($key));
+            wp_safe_redirect(get_site_url());
+            exit();
+        }
+
+    }
+
+    /**
+     * @param $key
+     * @return string
+     */
+    public function buildActionUrl($key): string {
+        return get_site_url() . "/sec-action/" . base64_encode($key);
     }
 
 }
