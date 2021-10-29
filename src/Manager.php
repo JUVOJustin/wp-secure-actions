@@ -94,6 +94,11 @@ class Manager
     }
 
     /**
+     * Executes an action. 
+     * Before the execution takes place the execution limit and expiration are checked. If these checks fail an error will be returned
+     * It will pass all arguments to the callback function und execute it. 
+     * If the callback returns something else than null or WP_Error the counter of the action is incremented by one.
+     * 
      * @param string $key
      * @return \WP_Error
      * @throws \Exception
@@ -149,14 +154,20 @@ class Manager
     }
 
     /**
+     * Get action by its id
+     *
      * @param int $id
      * @return Action|\WP_Error
      */
     public function getAction(int $id) {
-        // Get action
-        return $this->database->getAction(intval($id));
+        return $this->database->getAction($id);
     }
 
+    /**
+     * Cronjob callback that deletes actions that expired or whose limit has been reached
+     *
+     * @throws \Exception
+     */
     public function secureActionsCleanup() {
 
         foreach ($this->database->getAllActions() as $action) {
@@ -191,6 +202,8 @@ class Manager
     }
 
     /**
+     * Deletes an action
+     *
      * @param int|Action $action
      * @return bool|Action|\WP_Error
      */
@@ -212,7 +225,7 @@ class Manager
     }
 
     /**
-     * Add secure downloads rewrite rule
+     * Add secure action rewrite rule
      */
     public function rewriteAddRewrites(): void {
         add_rewrite_rule(
@@ -234,7 +247,7 @@ class Manager
     }
 
     /**
-     * Executes Secure Action by key passed with sec-d var
+     * Executes Secure Action by key passed with sec-action var
      *
      * @throws \Exception
      */
@@ -249,6 +262,8 @@ class Manager
     }
 
     /**
+     * Generates a url by appending the sites url with the query var and the base64 encoded key
+     *
      * @param string $key
      * @return string
      */
