@@ -53,6 +53,9 @@ class Manager
 
     }
 
+    /**
+     * Removes the cleanup cronjob
+     */
     public static function deactivate() {
         wp_clear_scheduled_hook( 'juvo_secure_actions_cleanup' );
     }
@@ -94,11 +97,11 @@ class Manager
     }
 
     /**
-     * Executes an action. 
+     * Executes an action.
      * Before the execution takes place the execution limit and expiration are checked. If these checks fail an error will be returned
-     * It will pass all arguments to the callback function und execute it. 
-     * If the callback returns something else than null or WP_Error the counter of the action is incremented by one.
-     * 
+     * It will pass all arguments to the callback function und execute it.
+     * If the callback returns something else than a value that evaluates to false or WP_Error the counter of the action is incremented by one.
+     *
      * @param string $key
      * @return \WP_Error
      * @throws \Exception
