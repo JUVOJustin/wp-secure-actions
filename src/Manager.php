@@ -29,7 +29,7 @@ class Manager
         if ( class_exists('\WP') && !defined('SECURE_ACTIONS_LOADED') ) {
             self::init();
 
-            add_action('juvo_secure_actions_cleanup', __NAMESPACE__.'\Manager::secureActionsCleanup');
+            add_action('juvo_secure_actions_cleanup', [$this, "secureActionsCleanup"]);
             add_action('init', array($this, "rewriteAddRewrites") );
             add_action('query_vars', array($this, "rewriteAddVar") );
             add_action('parse_query', array($this, "catchAction") );
