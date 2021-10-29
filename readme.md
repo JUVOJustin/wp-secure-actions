@@ -17,7 +17,7 @@ Simply instantiate the `Manager` class as early as possible by adding the follow
 
 ```php
  // Init Secure Actions  
- Manager::getInstance();
+ \juvo\WordPressSecureActions\Manager::getInstance();
 ```
 Secure Actions will take care it is only loaded once. It will automatically register the cleanup cron job and default url handling process.
 
