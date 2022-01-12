@@ -1,0 +1,29 @@
+{
+    "name": "juvo/wp-secure-actions",
+    "description": "Framework to securely handle verifiable actions in wordpress",
+    "keywords"    : [ "wordpress", "actions"],
+    "license": "GPL-3.0-or-later",
+    "require": {
+        "php": ">=7.2.0"
+    },
+    "support"     : {
+        "issues" : "https://github.com/JUVOJustin/wp-secure-actions/issues"
+    },
+    "authors": [
+        {
+            "name": "Justin Vogt",
+            "email": "mail@juvo-design.de",
+            "homepage": "https://juvo-design.de"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "juvo\\WordPressSecureActions\\": "src/"
+        }
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^0.12.88",
+        "szepeviktor/phpstan-wordpress": "^0.7.5",
+        "phpstan/extension-installer": "^1.1"
+    }
+}
