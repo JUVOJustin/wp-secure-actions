@@ -94,11 +94,6 @@ class Manager
     }
 
     /**
-     * Executes an action. 
-     * Before the execution takes place the execution limit and expiration are checked. If these checks fail an error will be returned
-     * It will pass all arguments to the callback function und execute it. 
-     * If the callback returns something else than null or WP_Error the counter of the action is incremented by one.
-     * 
      * @param string $key
      * @return \WP_Error
      * @throws \Exception
@@ -106,13 +101,12 @@ class Manager
     public function executeAction(string $key) {
         global $wp_hasher;
 
-        // Split key by :
-        list($id, $key) = explode(':', $key, 2);
-
-        $action = $this->getAction(intval($id));
+        $action = $this->getActionDataByKey($key);
         if (is_wp_error($action)) {
             return $action;
         }
+
+        $key = $this->getActionDataByKey($key, "key");
 
         // Verify key
         if (empty($wp_hasher)) {
@@ -120,33 +114,31 @@ class Manager
             $wp_hasher = new \PasswordHash(8, true);
         }
         if (!$wp_hasher->CheckPassword($key, $action->getPassword())) {
-            return new \WP_Error('invalid_key', __('The confirmation key is invalid for this secure action.'));
+            return new \WP_Error('invalid_key', __('The confirmation key is invalid for this secure action.', 'juvo_secure_actions'));
         }
 
         // Check if expiration is reached
         if ($action->isExpired()) {
             $this->database->deleteAction($action);
-            return new \WP_Error('secure_action_limit', __('The action expired.'));
+            return new \WP_Error('secure_action_limit', __('The action expired.', 'juvo_secure_actions'));
         }
 
         // Check if count limit is reached
         if ($action->isLimitReached()) {
             $this->database->deleteAction($action);
-            return new \WP_Error('secure_action_limit', __('The actions limit was exceeded.'));
+            return new \WP_Error('secure_action_limit', __('The actions limit was exceeded.', 'juvo_secure_actions'));
         }
 
         // Execute callback
         if (!is_callable($action->getCallback())) {
-            return new \WP_Error('secure_action_callback', __('The actions callback is not callable.'));
+            return new \WP_Error('secure_action_callback', __('The actions callback is not callable.', 'juvo_secure_actions'));
         }
 
         $result = call_user_func_array($action->getCallback(), $action->getArgs());
 
         // Only increment counter if variable is no error nor false
         if ($result && !is_wp_error($result)) {
-            // Increment count
-            $action->setCount($action->getCount() + 1);
-            $this->database->updateAction($action);
+            $this->incrementCount($action);
         }
 
         return $result;
@@ -154,20 +146,50 @@ class Manager
     }
 
     /**
-     * Get action by its id
+     * Increments Count of action. Should only be called after a successfull exection.
+     * If the callback has no return value you might have to call this function manually to make sure the count is incremented
+     * even without any return value.
      *
+     * @param Action $action
+     * @return Action|\WP_Error
+     */
+    public function incrementCount(Action $action) {
+        $action->setCount($action->getCount() + 1);
+        return $this->database->updateAction($action);
+    }
+
+    /**
      * @param int $id
      * @return Action|\WP_Error
      */
     public function getAction(int $id) {
-        return $this->database->getAction($id);
+        // Get action
+        return $this->database->getAction(intval($id));
     }
 
     /**
-     * Cronjob callback that deletes actions that expired or whose limit has been reached
+     * Retuns the key or the action form the provided key.
+     * This function takes care of splitting the concatenated id+key string.
      *
-     * @throws \Exception
+     * @param string $key
+     * @param null|string $info
+     * @return Action|string|\WP_Error
      */
+    public function getActionDataByKey(string $key, ?string $info = null) {
+
+        list($id, $key) = explode(':', $key, 2);
+
+        switch ($info) {
+            case "key":
+                return $key;
+            case "id":
+                return $id;
+        }
+
+        return $this->getAction(intval($id));
+
+    }
+
     public function secureActionsCleanup() {
 
         foreach ($this->database->getAllActions() as $action) {
@@ -185,11 +207,6 @@ class Manager
                 $delete = true;
             }
 
-            // If is persistent action do not delete
-            if ($action->isPersistent()) {
-                $delete = false;
-            }
-
             // Apply secure_action_cleanup filters
             $delete = apply_filters("secure_action_cleanup", $delete, $action, $action->getName());
 
@@ -202,8 +219,6 @@ class Manager
     }
 
     /**
-     * Deletes an action
-     *
      * @param int|Action $action
      * @return bool|Action|\WP_Error
      */
@@ -225,7 +240,7 @@ class Manager
     }
 
     /**
-     * Add secure action rewrite rule
+     * Add secure downloads rewrite rule
      */
     public function rewriteAddRewrites(): void {
         add_rewrite_rule(
@@ -247,23 +262,34 @@ class Manager
     }
 
     /**
-     * Executes Secure Action by key passed with sec-action var
+     * Executes Secure Action by key passed with sec-d var
      *
      * @throws \Exception
      */
     public function catchAction(): void {
 
         if ($key = get_query_var('sec-action')) {
-            (Manager::getInstance())->executeAction(base64_decode($key));
-            wp_safe_redirect(get_site_url());
-            exit();
+            $key = base64_decode($key);
+            $result = Manager::getInstance()->executeAction($key);
+
+            if (!$result || is_wp_error($result)) {
+
+                $action = $this->getActionDataByKey($key);
+
+                /**
+                 * Allows hooking into the redirect url if the catched action returned an error
+                 */
+                $url = apply_filters( 'juvo_secure_actions_catch_action_redirect', get_site_url(), $action, $result);
+
+                wp_safe_redirect($url);
+                exit();
+
+            }
         }
 
     }
 
     /**
-     * Generates a url by appending the sites url with the query var and the base64 encoded key
-     *
      * @param string $key
      * @return string
      */
