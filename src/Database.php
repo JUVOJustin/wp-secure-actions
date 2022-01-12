@@ -174,24 +174,32 @@ class Database
     }
 
     /**
-     * Delete a single secure_action entry from database
+     * Delete a single secure_action entry from database.
      *
      * @param Action $action
      * @return \WP_Error|bool
      */
     public function deleteAction(Action $action) {
 
-        $this->wpdb->delete(
-            $this->table,
-            array('ID' => $action->getId()),
-            array('%d')
-        );
+        $delete = apply_filters('juvo_secure_actions_delete', $action->isPersistent() ? false : true, $action);
 
-        if (!empty($this->wpdb->last_error)) {
-            return new \WP_Error("error_deleting_secure_action", $this->wpdb->last_error);
+        if ($delete) {
+
+            $this->wpdb->delete(
+                $this->table,
+                array('ID' => $action->getId()),
+                array('%d')
+            );
+
+            if (!empty($this->wpdb->last_error)) {
+                return new \WP_Error("error_deleting_secure_action", $this->wpdb->last_error);
+            }
+
+            return true;
+
         }
         
-        return true;
+        return false;
     }
 
     /**
