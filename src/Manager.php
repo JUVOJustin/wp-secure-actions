@@ -272,7 +272,7 @@ class Manager
             $key = base64_decode($key);
             $result = Manager::getInstance()->executeAction($key);
 
-            if (!$result || is_wp_error($result)) {
+            if (is_wp_error($result) || empty($result)) {
 
                 $action = $this->getActionDataByKey($key);
 
