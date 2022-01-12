@@ -108,7 +108,8 @@ class Action
      * @return array
      */
     public function getArgs(): array {
-        return $this->args;
+        $args = $this->args + ['action' => $this];
+        return $args;
     }
 
     /**
