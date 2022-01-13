@@ -11,8 +11,7 @@ class Manager
     private $database;
 
     public static function getInstance(): ?Manager {
-        if (self::$instance == null)
-        {
+        if (self::$instance == null) {
             self::$instance = new Manager();
         }
 
@@ -21,18 +20,18 @@ class Manager
 
     private function __construct() {
 
-        if ( !defined('ABSPATH') ) {
+        if (!defined('ABSPATH')) {
             return;
         }
 
         // Make sure only loaded once
-        if ( class_exists('\WP') && !defined('SECURE_ACTIONS_LOADED') ) {
+        if (class_exists('\WP') && !defined('SECURE_ACTIONS_LOADED')) {
             self::init();
 
             add_action('juvo_secure_actions_cleanup', [$this, "secureActionsCleanup"]);
-            add_action('init', array($this, "rewriteAddRewrites") );
-            add_action('query_vars', array($this, "rewriteAddVar") );
-            add_action('parse_query', array($this, "catchAction") );
+            add_action('init', array($this, "rewriteAddRewrites"));
+            add_action('query_vars', array($this, "rewriteAddVar"));
+            add_action('init', array($this, "catchAction"));
 
             $this->database = new Database();
 
@@ -54,7 +53,7 @@ class Manager
     }
 
     public static function deactivate() {
-        wp_clear_scheduled_hook( 'juvo_secure_actions_cleanup' );
+        wp_clear_scheduled_hook('juvo_secure_actions_cleanup');
     }
 
     /**
@@ -119,13 +118,13 @@ class Manager
 
         // Check if expiration is reached
         if ($action->isExpired()) {
-            $this->database->deleteAction($action);
+            $this->deleteAction($action);
             return new \WP_Error('secure_action_limit', __('The action expired.', 'juvo_secure_actions'));
         }
 
         // Check if count limit is reached
         if ($action->isLimitReached()) {
-            $this->database->deleteAction($action);
+            $this->deleteAction($action);
             return new \WP_Error('secure_action_limit', __('The actions limit was exceeded.', 'juvo_secure_actions'));
         }
 
@@ -211,7 +210,7 @@ class Manager
             $delete = apply_filters("secure_action_cleanup", $delete, $action, $action->getName());
 
             if ($delete) {
-                $this->database->deleteAction($action);
+                $this->deleteAction($action);
             }
 
         }
@@ -235,22 +234,30 @@ class Manager
             return new \WP_Error('secure_action_delete', __('No valid action id or Action instance provided.'));
         }
 
-        return $this->database->deleteAction($action);
+        if (apply_filters('juvo_secure_actions_delete', $action->isPersistent() ? false : true, $action)) {
+            return $this->database->deleteAction($action);
+        }
+
+        return false;
 
     }
 
     /**
+     * @deprecated General none wp_query related parameter is used
+     *
      * Add secure downloads rewrite rule
      */
     public function rewriteAddRewrites(): void {
         add_rewrite_rule(
-            'sec-action/(.+)[/]?$', // sec-action, with any following downloads
+            'sec-action=(.+)[\/]?$', // sec-action, with any following downloads
             'index.php?sec-action=$matches[1]',
             'top'
         );
     }
 
     /**
+     * @deprecated General none wp_query related parameter is used
+     *
      * Add query var
      *
      * @param array $vars
@@ -268,33 +275,44 @@ class Manager
      */
     public function catchAction(): void {
 
-        if ($key = get_query_var('sec-action')) {
+        if (isset($_GET['sec-action'])) {
+
+            $key = sanitize_text_field($_GET['sec-action']);
+
             $key = base64_decode($key);
             $result = Manager::getInstance()->executeAction($key);
+            $action = $this->getActionDataByKey($key);
 
-            if (is_wp_error($result) || empty($result)) {
+            // Get current url
+            $url = home_url(esc_url($_SERVER["REQUEST_URI"]));
 
-                $action = $this->getActionDataByKey($key);
+            // Remove arg to avoid endless loop
+            $url = remove_query_arg('sec-action', $url);
 
-                /**
-                 * Allows hooking into the redirect url if the catched action returned an error
-                 */
-                $url = apply_filters( 'juvo_secure_actions_catch_action_redirect', get_site_url(), $action, $result);
+            $url = apply_filters('juvo_secure_actions_catch_action_redirect', $url, $action, $result);
 
-                wp_safe_redirect($url);
-                exit();
-
-            }
+            wp_safe_redirect($url);
+            exit();
         }
 
     }
 
     /**
      * @param string $key
+     * @param string $url
      * @return string
      */
-    public function buildActionUrl(string $key): string {
-        return get_site_url() . "/sec-action/" . base64_encode($key);
+    public function buildActionUrl(string $key, string $url = ""): string {
+
+        if (empty($url)) {
+            $url = get_site_url();
+        }
+
+        $url = add_query_arg(array(
+            'sec-action' => base64_encode($key)
+        ), $url);
+
+        return $url;
     }
 
 }
