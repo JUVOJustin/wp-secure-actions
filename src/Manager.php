@@ -249,7 +249,7 @@ class Manager
      */
     public function rewriteAddRewrites(): void {
         add_rewrite_rule(
-            'sec-action=(.+)[\/]?$', // sec-action, with any following downloads
+            'sec-action/(.+)[/]?$', // sec-action, with any following downloads
             'index.php?sec-action=$matches[1]',
             'top'
         );
