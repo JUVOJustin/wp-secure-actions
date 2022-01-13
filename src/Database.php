@@ -148,7 +148,8 @@ class Database
         if ($result !== null) {
             $result = $this->resultRowToAction($result);
         } else {
-            return new \WP_Error("error_getting_secure_action", $this->wpdb->last_error);
+            $err = $this->wpdb->last_error ?: "Error while selecting action with ID $id. Maybe it was already deleted.";
+            return new \WP_Error("error_getting_secure_action", $err);
         }
 
         return $result;
@@ -181,25 +182,18 @@ class Database
      */
     public function deleteAction(Action $action) {
 
-        $delete = apply_filters('juvo_secure_actions_delete', $action->isPersistent() ? false : true, $action);
+        $this->wpdb->delete(
+            $this->table,
+            array('ID' => $action->getId()),
+            array('%d')
+        );
 
-        if ($delete) {
-
-            $this->wpdb->delete(
-                $this->table,
-                array('ID' => $action->getId()),
-                array('%d')
-            );
-
-            if (!empty($this->wpdb->last_error)) {
-                return new \WP_Error("error_deleting_secure_action", $this->wpdb->last_error);
-            }
-
-            return true;
-
+        if (!empty($this->wpdb->last_error)) {
+            return new \WP_Error("error_deleting_secure_action", $this->wpdb->last_error);
         }
-        
-        return false;
+
+        return true;
+
     }
 
     /**
