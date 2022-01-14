@@ -72,7 +72,7 @@ function createAction( $user_id, $old_user_data ) {
 		"send_mail_$user_id", // name
 		"ourCallbackFunction", // callback
 		[
-			$user->ID, // arg1
+			$user, // arg1
 		]
 	);
 
@@ -88,13 +88,14 @@ function createAction( $user_id, $old_user_data ) {
 }
 
 // Callback that executes when link is clicked
-function ourCallbackFunction(int $user_id) {
-	wp_generate_auth_cookie($user_id,  DAY_IN_SECONDS); // Log user in
-	
+function ourCallbackFunction(WP_User $user, Action $action) {
+	wp_set_auth_cookie($user->ID, false);
+	do_action('wp_login', $user->user_login, $user);
+
 	// Manually increment count because function has no return value
 	\juvo\WordPressSecureActions\Manager::getInstance()->incrementCount($action);
-	
-	wp_safe_redirect(get_edit_profile_url($user_id)); // Redirect to profile page
+
+	wp_safe_redirect(get_edit_profile_url($user->ID)); // Redirect to profile page
 	exit;
 } 
 ```
