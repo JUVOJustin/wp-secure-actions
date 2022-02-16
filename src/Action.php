@@ -108,8 +108,8 @@ class Action
      * @return array
      */
     public function getArgs(): array {
-        $args = $this->args + ['action' => $this];
-        return $args;
+        $args = $this->args; // Dereference
+        return $args + [$this];
     }
 
     /**
