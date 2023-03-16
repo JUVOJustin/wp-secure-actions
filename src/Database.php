@@ -37,7 +37,8 @@ class Database
           `expiration` BIGINT(20) NOT NULL,
           `created_at` DATETIME NOT NULL,
           `persistent` tinyint(1) DEFAULT 0 NOT NULL,
-          PRIMARY KEY  (id)
+          PRIMARY KEY  (id),
+          UNIQUE KEY name (name)
         ) $charset_collate;";
 
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
@@ -54,7 +55,9 @@ class Database
      * @param int $limit
      * @param int $count
      * @param int $expiration
+     * @param \DateTimeImmutable $created_at
      * @param bool $persistent
+     * @param null $id
      * @return Action|\WP_Error
      */
     public function replaceAction(string $password, string $name, $callback, $args, int $limit, int $count, int $expiration, \DateTimeImmutable $created_at, bool $persistent, $id = null) {
@@ -137,18 +140,30 @@ class Database
     /**
      * Returns a single secure_action entry
      *
-     * @param int $id
+     * @param string|int $value if string is passed it will get the action by 'name'. If int is passed it will get the action by ID
      * @return Action|\WP_Error
+     * @throws \Exception
      */
-    public function getAction(int $id) {
+    public function getAction($value) {
 
-        $query = $this->wpdb->prepare( "SELECT * FROM {$this->table} WHERE id = %d", $id );
+        $query = "SELECT * FROM {$this->table} WHERE ";
+        if (is_string($value)) {
+            $query .= "name = %s";
+            $err = "Error while selecting action with Name $value. Maybe it was already deleted.";
+        } elseif(is_int($value)) {
+            $query .= "id = %d";
+            $err = "Error while selecting action with ID $value. Maybe it was already deleted.";
+        } else {
+            return new \WP_Error('invalid_value_get_secure_action', "A single action can only be queried by the id or the name. Please provide an int or a string");
+        }
+
+        $query = $this->wpdb->prepare($query, $value );
         $result = $this->wpdb->get_row($query);
 
         if ($result !== null) {
             $result = $this->resultRowToAction($result);
         } else {
-            $err = $this->wpdb->last_error ?: "Error while selecting action with ID $id. Maybe it was already deleted.";
+            $err = $this->wpdb->last_error ?: $err;
             return new \WP_Error("error_getting_secure_action", $err);
         }
 
@@ -159,7 +174,8 @@ class Database
     /**
      * Get all secure_action entries
      *
-     * @return Action[]|\WP_Error
+     * @return \Generator|\WP_Error
+     * @throws \Exception
      */
     public function getAllActions() {
 
@@ -201,6 +217,7 @@ class Database
      *
      * @param \stdClass $result
      * @return Action
+     * @throws \Exception
      */
     private function resultRowToAction(\stdClass $result): Action {
         return new Action(
