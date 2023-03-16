@@ -57,10 +57,10 @@ class Database
      * @param int $expiration
      * @param \DateTimeImmutable $created_at
      * @param bool $persistent
-     * @param null $id
+     * @param int|null $id
      * @return Action|\WP_Error
      */
-    public function replaceAction(string $password, string $name, $callback, $args, int $limit, int $count, int $expiration, \DateTimeImmutable $created_at, bool $persistent, $id = null) {
+    public function replaceAction(string $password, string $name, $callback, $args, int $limit, int $count, int $expiration, \DateTimeImmutable $created_at, bool $persistent, ?int $id = null) {
 
         $value = array(
             'password'   => $password,
