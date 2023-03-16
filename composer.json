@@ -22,8 +22,13 @@
         }
     },
     "require-dev": {
-        "phpstan/phpstan": "^0.12.88",
-        "szepeviktor/phpstan-wordpress": "^0.7.5",
+        "phpstan/phpstan": "^1.10.6",
+        "szepeviktor/phpstan-wordpress": "^v1.1.7",
         "phpstan/extension-installer": "^1.1"
+    },
+    "config": {
+        "allow-plugins": {
+            "phpstan/extension-installer": true
+        }
     }
 }
