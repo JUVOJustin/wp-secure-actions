@@ -65,6 +65,7 @@ class Manager
      * @param string $key
      * @param bool $persistent
      * @return \WP_Error|string
+     * @throws \Exception
      */
     public function addAction(string $name, $callback, array $args = [], int $expiration = -1, int $limit = -1, bool $persistent = false, string $key = "") {
         global $wp_hasher;
@@ -145,7 +146,7 @@ class Manager
     }
 
     /**
-     * Increments Count of action. Should only be called after a successfull exection.
+     * Increments Count of action. Should only be called after a successfull execution.
      * If the callback has no return value you might have to call this function manually to make sure the count is incremented
      * even without any return value.
      *
@@ -158,16 +159,16 @@ class Manager
     }
 
     /**
-     * @param int $id
+     * @param $value
      * @return Action|\WP_Error
+     * @throws \Exception
      */
-    public function getAction(int $id) {
-        // Get action
-        return $this->database->getAction(intval($id));
+    public function getAction($value) {
+        return $this->database->getAction($value);
     }
 
     /**
-     * Retuns the key or the action form the provided key.
+     * Returns the key or the action form the provided key.
      * This function takes care of splitting the concatenated id+key string.
      *
      * @param string $key
