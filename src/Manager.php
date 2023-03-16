@@ -30,7 +30,7 @@ class Manager
 
             add_action('juvo_secure_actions_cleanup', [$this, "secureActionsCleanup"]);
             add_action('init', array($this, "rewriteAddRewrites"));
-            add_action('query_vars', array($this, "rewriteAddVar"));
+            add_filter('query_vars', array($this, "rewriteAddVar"));
             add_action('init', array($this, "catchAction"));
 
             $this->database = new Database();
@@ -219,8 +219,9 @@ class Manager
     }
 
     /**
-     * @param int|Action $action
+     * @param mixed|Action $action
      * @return bool|Action|\WP_Error
+     * @throws \Exception
      */
     public function deleteAction($action) {
 
