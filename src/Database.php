@@ -29,7 +29,7 @@ class Database
         $sql = "CREATE TABLE $table_name (
           `id` BIGINT(20) NOT NULL AUTO_INCREMENT,
           `password` varchar(255) NOT NULL,
-          `name` tinytext NOT NULL,
+          `name` varchar(255) NOT NULL,
           `callback` longtext NOT NULL,
           `args` longtext,
           `limit` int NOT NULL,
