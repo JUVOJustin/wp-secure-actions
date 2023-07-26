@@ -110,7 +110,7 @@ class Action
     public function getArgs(): array {
         $args = $this->args; // Dereference
         $args[] = $this;
-        return $args;
+        return array_values($args);
     }
 
     /**
@@ -195,6 +195,5 @@ class Action
     public function getExpiration(): int {
         return $this->expiration;
     }
-
 
 }
