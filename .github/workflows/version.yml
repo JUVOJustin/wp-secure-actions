@@ -1,0 +1,36 @@
+name: Update Version
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Update Version
+        run: |
+          VERSION=$(echo ${GITHUB_REF#refs/tags/} | sed 's/\//_/g')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Replace version in Manager.php
+        run: sed -i "s/^\(\s*\)\$current_version = '[^']*';/\1\$current_version = '${{ env.VERSION }}';/" src/Manager.php
+
+      - name: Update resources
+        uses: test-room-7/action-update-file@v1
+        with:
+          file-path: |
+            src/Manager.php
+          commit-msg: Update Version
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Composer Auth
+        run: composer config http-basic.repo.packagist.com ${{ secrets.PACKAGIST_USERNAME }} ${{ secrets.PACKAGIST_API_TOKEN }}
+
+      - name: Publish to Packagist
+        run: composer update && composer push
