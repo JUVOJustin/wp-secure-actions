@@ -44,7 +44,7 @@ class Manager
     public static function init(): void
     {
 
-        $current_version = '0.0.0';
+        $current_version = '3.2.3';
         $option = get_option('juvo-secure-options', '0.0.0');
 
         if (version_compare($option, $current_version) == -1) {
