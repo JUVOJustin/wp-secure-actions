@@ -10,7 +10,8 @@ class Manager
     private static $instance = null;
     private $database;
 
-    public static function getInstance(): ?Manager {
+    public static function getInstance(): ?Manager
+    {
         if (self::$instance == null) {
             self::$instance = new Manager();
         }
@@ -18,41 +19,51 @@ class Manager
         return self::$instance;
     }
 
-    private function __construct() {
+    private function __construct()
+    {
 
         if (!defined('ABSPATH')) {
             return;
         }
 
-        // Make sure only loaded once
-        if (class_exists('\WP') && !defined('SECURE_ACTIONS_LOADED')) {
+        add_action('init', function() {
             self::init();
+        });
 
-            add_action('juvo_secure_actions_cleanup', [$this, "secureActionsCleanup"]);
-            add_action('init', array($this, "rewriteAddRewrites"));
-            add_filter('query_vars', array($this, "rewriteAddVar"));
-            add_action('template_redirect', array($this, "catchAction"));
+        add_action('juvo_secure_actions_cleanup', [$this, "secureActionsCleanup"]);
+        add_action('init', array($this, "rewriteAddRewrites"));
+        add_filter('query_vars', array($this, "rewriteAddVar"));
+        add_action('template_redirect', array($this, "catchAction"));
 
-            $this->database = new Database();
+        $this->database = new Database();
 
-            define('SECURE_ACTIONS_LOADED', true);
+        define('SECURE_ACTIONS_LOADED', true);
+
+    }
+
+    public static function init(): void
+    {
+
+        $current_version = '0.0.0';
+        $option = get_option('juvo-secure-options', '0.0.0');
+
+        if (version_compare($option, $current_version) == -1) {
+
+            // Add database
+            Database::addTable();
+
+            // Register cron to cleanup secure actions
+            if (!wp_next_scheduled('juvo_secure_actions_cleanup')) {
+                wp_schedule_event(strtotime('tomorrow'), 'daily', 'juvo_secure_actions_cleanup');
+            }
+
+            update_option('juvo-secure-options', $current_version, true);
         }
 
     }
 
-    public static function init(): void {
-
-        // Add database
-        Database::addTable();
-
-        // Register cron to cleanup secure actions
-        if (!wp_next_scheduled('juvo_secure_actions_cleanup')) {
-            wp_schedule_event(strtotime('tomorrow'), 'daily', 'juvo_secure_actions_cleanup');
-        }
-
-    }
-
-    public static function deactivate() {
+    public static function deactivate()
+    {
         wp_clear_scheduled_hook('juvo_secure_actions_cleanup');
     }
 
@@ -67,7 +78,8 @@ class Manager
      * @return \WP_Error|string
      * @throws \Exception
      */
-    public function addAction(string $name, $callback, array $args = [], int $expiration = -1, int $limit = -1, bool $persistent = false, string $key = "") {
+    public function addAction(string $name, $callback, array $args = [], int $expiration = -1, int $limit = -1, bool $persistent = false, string $key = "")
+    {
         global $wp_hasher;
 
         if (empty($wp_hasher)) {
@@ -98,7 +110,8 @@ class Manager
      * @return \WP_Error
      * @throws \Exception
      */
-    public function executeAction(string $key) {
+    public function executeAction(string $key)
+    {
         global $wp_hasher;
 
         $action = $this->getActionDataByKey($key);
@@ -153,7 +166,8 @@ class Manager
      * @param Action $action
      * @return Action|\WP_Error
      */
-    public function incrementCount(Action $action) {
+    public function incrementCount(Action $action)
+    {
         $action->setCount($action->getCount() + 1);
         return $this->database->updateAction($action);
     }
@@ -163,7 +177,8 @@ class Manager
      * @return Action|\WP_Error
      * @throws \Exception
      */
-    public function getAction($value) {
+    public function getAction($value)
+    {
         return $this->database->getAction($value);
     }
 
@@ -175,7 +190,8 @@ class Manager
      * @param null|string $info
      * @return Action|string|\WP_Error
      */
-    public function getActionDataByKey(string $key, ?string $info = null) {
+    public function getActionDataByKey(string $key, ?string $info = null)
+    {
 
         list($id, $key) = explode(':', $key, 2);
 
@@ -190,7 +206,8 @@ class Manager
 
     }
 
-    public function secureActionsCleanup() {
+    public function secureActionsCleanup()
+    {
 
         foreach ($this->database->getAllActions() as $action) {
 
@@ -223,7 +240,8 @@ class Manager
      * @return bool|Action|\WP_Error
      * @throws \Exception
      */
-    public function deleteAction($action) {
+    public function deleteAction($action)
+    {
 
         if (is_int($action)) {
             $action = $this->getAction($action);
@@ -249,7 +267,8 @@ class Manager
      *
      * Add secure downloads rewrite rule
      */
-    public function rewriteAddRewrites(): void {
+    public function rewriteAddRewrites(): void
+    {
         add_rewrite_rule(
             'sec-action/(.+)[/]?$', // sec-action, with any following downloads
             'index.php?sec-action=$matches[1]',
@@ -258,14 +277,15 @@ class Manager
     }
 
     /**
+     * @param array $vars
+     * @return array
      * @deprecated General none wp_query related parameter is used
      *
      * Add query var
      *
-     * @param array $vars
-     * @return array
      */
-    public function rewriteAddVar(array $vars): array {
+    public function rewriteAddVar(array $vars): array
+    {
         $vars[] = 'sec-action';
         return $vars;
     }
@@ -275,7 +295,8 @@ class Manager
      *
      * @throws \Exception
      */
-    public function catchAction(): void {
+    public function catchAction(): void
+    {
 
         if (isset($_GET['sec-action'])) {
 
@@ -304,7 +325,8 @@ class Manager
      * @param string $url
      * @return string
      */
-    public function buildActionUrl(string $key, string $url = ""): string {
+    public function buildActionUrl(string $key, string $url = ""): string
+    {
 
         if (empty($url)) {
             $url = get_site_url();
