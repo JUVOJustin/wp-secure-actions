@@ -28,9 +28,8 @@ jobs:
             src/Manager.php
           commit-msg: Update Version
           github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Composer Auth
-        run: composer config http-basic.repo.packagist.com ${{ secrets.PACKAGIST_USERNAME }} ${{ secrets.PACKAGIST_API_TOKEN }}
-
-      - name: Publish to Packagist
-        run: composer update && composer push
+          
+      - name: Update release    
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: "true"
