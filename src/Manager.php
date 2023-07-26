@@ -33,7 +33,7 @@ class Manager
         add_action('juvo_secure_actions_cleanup', [$this, "secureActionsCleanup"]);
         add_action('init', array($this, "rewriteAddRewrites"));
         add_filter('query_vars', array($this, "rewriteAddVar"));
-        add_action('template_redirect', array($this, "catchAction"));
+        add_action('init', array($this, "catchAction"));
 
         $this->database = new Database();
 
