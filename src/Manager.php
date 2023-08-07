@@ -215,7 +215,6 @@ class Manager
      * @param string $column
      * @param $name
      * @return Action|WP_Error
-     * @throws \Exception
      */
     public function getActionBy(string $column, $name)
     {
