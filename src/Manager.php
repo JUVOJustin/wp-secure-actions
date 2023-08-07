@@ -198,18 +198,6 @@ class Manager
     }
 
     /**
-     * Query secure actions
-     *
-     * @param array $args Add query args supported by berlindb: https://github.com/berlindb/core/blob/master/src/Database/Query.php
-     * @return array|WP_Error
-     */
-    public function query($args)
-    {
-        $query = new Query($args);
-        return $query->items;
-    }
-
-    /**
      * Get an action by a column name
      *
      * @param string $column
