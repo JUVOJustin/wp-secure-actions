@@ -1,86 +1,77 @@
 <?php
 
+namespace juvo\WordPressSecureActions\DB;
 
-namespace juvo\WordPressSecureActions;
+use BerlinDB\Database\Row;
 
-
-class Action
+class Action extends Row
 {
 
     /**
      * @var int
      */
-    private $id;
+    protected $id;
 
     /**
      * @var string
      */
-    private $password;
+    protected $password;
 
     /**
      * @var string User friendly name to identify the action
      */
-    private $name;
+    protected $name;
 
     /**
      * @var array|string Callback Action to execution whenever action is triggered
      */
-    private $callback;
+    protected $callback;
 
     /**
      * @var array The parameters to be passed to the callback, as an indexed array.
      */
-    private $args;
+    protected $args;
 
     /**
      * @var int Limits how often the action can be executed
      */
-    private $limit;
+    protected $limit;
 
     /**
      * @var int stores how often the action was executed
      */
-    private $count;
+    protected $count;
 
     /**
      * @var int expiration intervall in seconds
      */
-    private $expiration;
+    protected $expiration;
 
     /**
      * @var \DateTimeImmutable date when the action was created
      */
-    private $created_at;
+    protected $created_at;
 
     /**
      * @var bool determines if action should be deleted when expired or limit reached
      */
-    private $persistent;
+    protected $persistent;
 
-    /**
-     * Action constructor.
-     * @param int $id
-     * @param string $password
-     * @param string $name
-     * @param array|string $callback
-     * @param array $args
-     * @param int $limit
-     * @param int $count
-     * @param int $expiration
-     * @param \DateTimeImmutable $created_at
-     * @param bool $persistent
-     */
-    public function __construct(int $id, string $password, string $name, $callback, array $args, int $limit, int $count, int $expiration, \DateTimeImmutable $created_at, bool $persistent) {
-        $this->id = $id;
-        $this->password = $password;
-        $this->name = $name;
-        $this->callback = $callback;
-        $this->args = $args;
-        $this->limit = $limit;
-        $this->count = $count;
-        $this->expiration = $expiration;
-        $this->created_at = $created_at;
-        $this->persistent = $persistent;
+    public function __construct($item)
+    {
+        parent::__construct($item);
+
+        // This is optional, but recommended. Set the type of each column, and prepare.
+        $this->id = (int)$this->id;
+        $this->password = (string)$this->password;
+        $this->name = (string)$this->name;
+        $this->callback = maybe_unserialize($this->callback);
+        $this->args = maybe_unserialize($this->args);
+        $this->limit = (int)$this->limit;
+        $this->count = (int)$this->count;
+        $this->expiration = (int)$this->expiration;
+        $this->created_at = new \DateTimeImmutable($this->created_at);
+        $this->persistent = (int)$this->persistent;
     }
 
     /**
@@ -195,5 +186,4 @@ class Action
     public function getExpiration(): int {
         return $this->expiration;
     }
-
 }

@@ -4,15 +4,23 @@
 namespace juvo\WordPressSecureActions;
 
 
+use juvo\WordPressSecureActions\DB\Query;
+use juvo\WordPressSecureActions\DB\Table;
+
 class Manager
 {
 
     private static $instance = null;
-    private $database;
+    /**
+     * @var Query
+     */
+    private $query;
 
     public static function getInstance(): ?Manager
     {
+
         if (self::$instance == null) {
+            require dirname(__FILE__) . "/../vendor/autoload.php";
             self::$instance = new Manager();
         }
 
@@ -35,7 +43,7 @@ class Manager
         add_filter('query_vars', array($this, "rewriteAddVar"));
         add_action('init', array($this, "catchAction"));
 
-        $this->database = new Database();
+        $this->query = new Query();
 
         define('SECURE_ACTIONS_LOADED', true);
 
@@ -44,22 +52,15 @@ class Manager
     public static function init(): void
     {
 
-        $current_version = '3.2.4';
-        $option = get_option('juvo-secure-options', '0.0.0');
-
-        if (version_compare($option, $current_version) == -1) {
-
-            // Add database
-            Database::addTable();
-
-            // Register cron to cleanup secure actions
-            if (!wp_next_scheduled('juvo_secure_actions_cleanup')) {
-                wp_schedule_event(strtotime('tomorrow'), 'daily', 'juvo_secure_actions_cleanup');
-            }
-
-            update_option('juvo-secure-options', $current_version, true);
+        $table = new Table();
+        if (!$table->exists()) {
+            $table->install();
         }
 
+        // Register cron to cleanup secure actions
+        if (!wp_next_scheduled('juvo_secure_actions_cleanup')) {
+            wp_schedule_event(strtotime('tomorrow'), 'daily', 'juvo_secure_actions_cleanup');
+        }
     }
 
     public static function deactivate()
@@ -94,12 +95,27 @@ class Manager
 
         $password = $wp_hasher->HashPassword($key);
 
+        $action = [
+            'password'   => $password,
+            'name'       => $name,
+            'callback'   => maybe_serialize($callback),
+            'args'       => maybe_serialize($args),
+            'limit'      => $limit,
+            'count'      => 0,
+            'expiration' => $expiration,
+            'created_at' => current_time( 'mysql', true ),
+            'persistent' => $persistent
+        ];
 
-        $action = $this->database->replaceAction($password, $name, $callback, $args, $limit, 0, $expiration, new \DateTimeImmutable("now", wp_timezone()), $persistent);
+        // Returns fresh action´s id
+        $action = $this->query->add_item($action);
 
-        if (is_wp_error($action)) {
-            return $action;
+        if ($action == false) {
+            return new \WP_Error("error_adding_secure_action", "Secure action could not be created");
         }
+
+        // Get action from db
+        $action = $this->query->get_item($action);
 
         return $action->getId() . ':' . $key;
 
@@ -169,17 +185,28 @@ class Manager
     public function incrementCount(Action $action)
     {
         $action->setCount($action->getCount() + 1);
-        return $this->database->updateAction($action);
+
+        $updated = $this->query->update_item(
+            $action->getId(),
+            [
+                'count' => $action->getCount()
+            ]
+        );
+        if (!$updated) {
+            return new \WP_Error("error_replacing_secure_action", "Secure Action could not be updated");
+        }
+
+        return $action;
     }
 
     /**
      * @param $value
-     * @return Action|\WP_Error
+     * @return false|Action|object|\WP_Error
      * @throws \Exception
      */
-    public function getAction($value)
+    public function getActionByName($value)
     {
-        return $this->database->getAction($value);
+        return $this->query->get_item_by('name', $value);
     }
 
     /**
@@ -189,6 +216,7 @@ class Manager
      * @param string $key
      * @param null|string $info
      * @return Action|string|\WP_Error
+     * @throws \Exception
      */
     public function getActionDataByKey(string $key, ?string $info = null)
     {
@@ -202,14 +230,17 @@ class Manager
                 return $id;
         }
 
-        return $this->getAction(intval($id));
+        return $this->query->get_item(intval($id));
 
     }
 
     public function secureActionsCleanup()
     {
 
-        foreach ($this->database->getAllActions() as $action) {
+        $query = new Query([
+            'number' => -1
+        ]);
+        foreach ($query->items as $action) {
 
             $delete = false;
 
@@ -244,7 +275,10 @@ class Manager
     {
 
         if (is_int($action)) {
-            $action = $this->getAction($action);
+            $query = new Query([
+                'id' => $action
+            ]);
+            $action = $query->items[0];
         }
 
         if (!$action instanceof Action) {
@@ -255,7 +289,7 @@ class Manager
         }
 
         if (apply_filters('juvo_secure_actions_delete', $action->isPersistent() ? false : true, $action)) {
-            return $this->database->deleteAction($action);
+            return $this->query->delete_item($action);
         }
 
         return false;
