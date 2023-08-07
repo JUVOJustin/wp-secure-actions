@@ -37,7 +37,18 @@ class Table extends \BerlinDB\Database\Table
      * @since 1.0.0
      * @var   mixed
      */
-    protected $version = '1.0.0';
+    protected $version = 202308071328;
+
+    /**
+     * Array of upgrade versions and methods.
+     *
+     * @access protected
+     * @since 2.0.0
+     * @var array
+     */
+    protected $upgrades = array(
+        '202308071328' => 202308071328,
+    );
 
     /**
      * Setup this database table.
@@ -53,13 +64,32 @@ class Table extends \BerlinDB\Database\Table
         `callback` longtext NOT NULL,
         `args` longtext,
         `limit` int NOT NULL,
-        `count` int NOT NULL,
+        `exec_count` int NOT NULL,
         `expiration` BIGINT(20) NOT NULL,
         `created_at` DATETIME NOT NULL,
         `persistent` tinyint(1) DEFAULT 0 NOT NULL,
         PRIMARY KEY  (id),
         UNIQUE KEY name (name)
         ";
+    }
+
+    /**
+     * Renames count column
+     *
+     * @since 2.0.0
+     *
+     * @return bool True if upgrade was successful, false otherwise.
+     */
+    protected function __202308071328() {
+
+        // Look for column
+        $result = $this->column_exists( 'exec_count' );
+        if ($result === false) {
+            $this->get_db()->query( "ALTER TABLE {$this->table_name} CHANGE count exec_count int NOT NULL;" );
+            // Return success/fail
+            return $this->is_success( true );
+        }
+        return false;
     }
 
 }

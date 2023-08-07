@@ -22,7 +22,8 @@ class Manager
     {
 
         if (self::$instance == null) {
-            require dirname(__FILE__) . "/../vendor/autoload.php";
+            require_once dirname(__FILE__) . "/../vendor/autoload.php";
+            require_once dirname(__FILE__) . "/../vendor/woocommerce/action-scheduler/action-scheduler.php";
             self::$instance = new Manager();
         }
 
@@ -54,10 +55,7 @@ class Manager
     public static function init(): void
     {
 
-        $table = new Table();
-        if (!$table->exists()) {
-            $table->install();
-        }
+        new Table();
 
         // Register cron to cleanup secure actions
         if (!wp_next_scheduled('juvo_secure_actions_cleanup')) {
@@ -105,7 +103,7 @@ class Manager
             'limit'      => $limit,
             'count'      => 0,
             'expiration' => $expiration,
-            'created_at' => current_time( 'mysql', true ),
+            'created_at' => current_time('mysql', true),
             'persistent' => $persistent
         ];
 
@@ -202,15 +200,28 @@ class Manager
     }
 
     /**
-     * Get an action by its name
+     * Query secure actions
      *
+     * @param array $args Add query args supported by berlindb: https://github.com/berlindb/core/blob/master/src/Database/Query.php
+     * @return array|WP_Error
+     */
+    public function query($args)
+    {
+        $query = new Query($args);
+        return $query->items;
+    }
+
+    /**
+     * Get an action by a column name
+     *
+     * @param string $column
      * @param $name
      * @return Action|WP_Error
      * @throws \Exception
      */
-    public function getAction($name)
+    public function getActionBy(string $column, $name)
     {
-        $action = $this->query->get_item_by('name', $name);
+        $action = $this->query->get_item_by($column, $name);
         if (!$action instanceof Action) {
             return new WP_Error("error_getting_secure_action", "Secure Action could not be found");
         }

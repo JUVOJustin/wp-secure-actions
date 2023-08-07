@@ -23,7 +23,7 @@ class Schema extends \BerlinDB\Database\Schema
             'length'     => '255',
             'allow_null' => false,
             'unsigned'   => true,
-            'searchable' => true,
+            'searchable' => false,
             'sortable'   => false,
         ],
 
@@ -61,13 +61,16 @@ class Schema extends \BerlinDB\Database\Schema
             'sortable'   => false,
         ],
 
-        'count' => [
-            'name'       => 'count',
+        'exec_count' => [
+            'name'       => 'exec_count',
             'type'       => 'int',
             'allow_null' => false,
             'unsigned'   => true,
             'searchable' => false,
             'sortable'   => false,
+            'aliases'    => [
+                'count'
+            ]
         ],
 
         'expiration' => [
@@ -83,8 +86,9 @@ class Schema extends \BerlinDB\Database\Schema
         'created_at' => [
             'name'       => 'created_at',
             'type'       => 'datetime',
+            'created'    => true,
             'date_query' => true,
-            'searchable' => true,
+            'searchable' => false,
             'sortable'   => true,
         ],
 

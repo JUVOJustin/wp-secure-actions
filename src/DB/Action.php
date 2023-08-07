@@ -40,7 +40,7 @@ class Action extends Row
     /**
      * @var int stores how often the action was executed
      */
-    protected $count;
+    protected $exec_count;
 
     /**
      * @var int expiration intervall in seconds
@@ -68,7 +68,7 @@ class Action extends Row
         $this->callback = maybe_unserialize($this->callback);
         $this->args = maybe_unserialize($this->args);
         $this->limit = (int)$this->limit;
-        $this->count = (int)$this->count;
+        $this->exec_count = (int)$this->exec_count;
         $this->expiration = (int)$this->expiration;
         $this->created_at = new \DateTimeImmutable($this->created_at);
         $this->persistent = (bool)$this->persistent;
@@ -130,16 +130,16 @@ class Action extends Row
      * @return int
      */
     public function getCount(): int {
-        return $this->count;
+        return $this->exec_count;
     }
 
     /**
-     * @param int $count
+     * @param int $exec_count
      * @return int
      */
-    public function setCount(int $count): int {
-        $this->count = $count;
-        return $count;
+    public function setCount(int $exec_count): int {
+        $this->exec_count = $exec_count;
+        return $exec_count;
     }
 
     /**
