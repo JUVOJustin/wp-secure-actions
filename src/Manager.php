@@ -22,8 +22,6 @@ class Manager
     {
 
         if (self::$instance == null) {
-            require_once dirname(__FILE__) . "/../vendor/autoload.php";
-            require_once dirname(__FILE__) . "/../vendor/woocommerce/action-scheduler/action-scheduler.php";
             self::$instance = new Manager();
         }
 
