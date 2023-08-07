@@ -101,9 +101,7 @@ class Manager
             'callback'   => maybe_serialize($callback),
             'args'       => maybe_serialize($args),
             'limit'      => $limit,
-            'count'      => 0,
             'expiration' => $expiration,
-            'created_at' => current_time('mysql', true),
             'persistent' => $persistent
         ];
 

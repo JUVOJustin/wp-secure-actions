@@ -68,9 +68,7 @@ class Schema extends \BerlinDB\Database\Schema
             'unsigned'   => true,
             'searchable' => false,
             'sortable'   => false,
-            'aliases'    => [
-                'count'
-            ]
+            'default'    => '0'
         ],
 
         'expiration' => [
@@ -96,7 +94,7 @@ class Schema extends \BerlinDB\Database\Schema
             'name'       => 'persistent',
             'type'       => 'tinyint',
             'length'     => '1',
-            'default'    => 0,
+            'default'    => '0',
             'unsigned'   => true,
             'allow_null' => false,
         ],
