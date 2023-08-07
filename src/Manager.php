@@ -110,7 +110,7 @@ class Manager
         // Returns fresh action´s id
         $action = $this->query->add_item($action);
 
-        if ($action == false) {
+        if (!$action) {
             return new \WP_Error("error_adding_secure_action", "Secure action could not be created");
         }
 
@@ -200,13 +200,15 @@ class Manager
     }
 
     /**
-     * @param $value
+     * Get an action by its name
+     *
+     * @param $name
      * @return false|Action|object|\WP_Error
      * @throws \Exception
      */
-    public function getActionByName($value)
+    public function getAction($name)
     {
-        return $this->query->get_item_by('name', $value);
+        return $this->query->get_item_by('name', $name);
     }
 
     /**
@@ -215,7 +217,7 @@ class Manager
      *
      * @param string $key
      * @param null|string $info
-     * @return Action|string|\WP_Error
+     * @return \juvo\WordPressSecureActions\DB\Action|string|\WP_Error
      * @throws \Exception
      */
     public function getActionDataByKey(string $key, ?string $info = null)
