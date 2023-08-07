@@ -278,10 +278,7 @@ class Manager
     {
 
         if (is_int($action)) {
-            $query = new Query([
-                'id' => $action
-            ]);
-            $action = $query->items[0];
+            $action = $this->query->get_item($action);
         }
 
         if (!$action instanceof Action) {
