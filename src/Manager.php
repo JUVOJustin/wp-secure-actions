@@ -4,6 +4,7 @@
 namespace juvo\WordPressSecureActions;
 
 
+use juvo\WordPressSecureActions\DB\Action;
 use juvo\WordPressSecureActions\DB\Query;
 use juvo\WordPressSecureActions\DB\Table;
 
@@ -217,7 +218,7 @@ class Manager
      *
      * @param string $key
      * @param null|string $info
-     * @return \juvo\WordPressSecureActions\DB\Action|string|\WP_Error
+     * @return Action|string|\WP_Error
      * @throws \Exception
      */
     public function getActionDataByKey(string $key, ?string $info = null)

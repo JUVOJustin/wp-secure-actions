@@ -28,7 +28,7 @@ class Action extends Row
     protected $callback;
 
     /**
-     * @var array The parameters to be passed to the callback, as an indexed array.
+     * @var array|string The parameters to be passed to the callback, as an indexed array.
      */
     protected $args;
 
@@ -48,7 +48,7 @@ class Action extends Row
     protected $expiration;
 
     /**
-     * @var \DateTimeImmutable date when the action was created
+     * @var \DateTimeImmutable|string date when the action was created
      */
     protected $created_at;
 
@@ -71,7 +71,7 @@ class Action extends Row
         $this->count = (int)$this->count;
         $this->expiration = (int)$this->expiration;
         $this->created_at = new \DateTimeImmutable($this->created_at);
-        $this->persistent = (int)$this->persistent;
+        $this->persistent = (bool)$this->persistent;
     }
 
     /**
