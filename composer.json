@@ -4,7 +4,9 @@
     "keywords"    : [ "wordpress", "actions"],
     "license": "GPL-3.0-or-later",
     "require": {
-        "php": ">=7.2.0"
+        "php": ">=7.2.0",
+        "berlindb/core": "^2.0",
+        "woocommerce/action-scheduler": "^3.6"
     },
     "support"     : {
         "issues" : "https://github.com/JUVOJustin/wp-secure-actions/issues"
