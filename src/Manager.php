@@ -7,6 +7,7 @@ namespace juvo\WordPressSecureActions;
 use juvo\WordPressSecureActions\DB\Action;
 use juvo\WordPressSecureActions\DB\Query;
 use juvo\WordPressSecureActions\DB\Table;
+use WP_Error;
 
 class Manager
 {
@@ -77,7 +78,7 @@ class Manager
      * @param int $limit
      * @param string $key
      * @param bool $persistent
-     * @return \WP_Error|string
+     * @return WP_Error|string
      * @throws \Exception
      */
     public function addAction(string $name, $callback, array $args = [], int $expiration = -1, int $limit = -1, bool $persistent = false, string $key = "")
@@ -112,7 +113,7 @@ class Manager
         $action = $this->query->add_item($action);
 
         if (!$action) {
-            return new \WP_Error("error_adding_secure_action", "Secure action could not be created");
+            return new WP_Error("error_adding_secure_action", "Secure action could not be created");
         }
 
         // Get action from db
@@ -124,7 +125,7 @@ class Manager
 
     /**
      * @param string $key
-     * @return \WP_Error
+     * @return WP_Error
      * @throws \Exception
      */
     public function executeAction(string $key)
@@ -132,7 +133,7 @@ class Manager
         global $wp_hasher;
 
         $action = $this->getActionDataByKey($key);
-        if (is_wp_error($action)) {
+        if (!$action || is_wp_error($action)) {
             return $action;
         }
 
@@ -144,24 +145,24 @@ class Manager
             $wp_hasher = new \PasswordHash(8, true);
         }
         if (!$wp_hasher->CheckPassword($key, $action->getPassword())) {
-            return new \WP_Error('invalid_key', __('The confirmation key is invalid for this secure action.', 'juvo_secure_actions'));
+            return new WP_Error('invalid_key', __('The confirmation key is invalid for this secure action.', 'juvo_secure_actions'));
         }
 
         // Check if expiration is reached
         if ($action->isExpired()) {
             $this->deleteAction($action);
-            return new \WP_Error('secure_action_limit', __('The action expired.', 'juvo_secure_actions'));
+            return new WP_Error('secure_action_limit', __('The action expired.', 'juvo_secure_actions'));
         }
 
         // Check if count limit is reached
         if ($action->isLimitReached()) {
             $this->deleteAction($action);
-            return new \WP_Error('secure_action_limit', __('The actions limit was exceeded.', 'juvo_secure_actions'));
+            return new WP_Error('secure_action_limit', __('The actions limit was exceeded.', 'juvo_secure_actions'));
         }
 
         // Execute callback
         if (!is_callable($action->getCallback())) {
-            return new \WP_Error('secure_action_callback', __('The actions callback is not callable.', 'juvo_secure_actions'));
+            return new WP_Error('secure_action_callback', __('The actions callback is not callable.', 'juvo_secure_actions'));
         }
 
         $result = call_user_func_array($action->getCallback(), $action->getArgs());
@@ -181,7 +182,7 @@ class Manager
      * even without any return value.
      *
      * @param Action $action
-     * @return Action|\WP_Error
+     * @return Action|WP_Error
      */
     public function incrementCount(Action $action)
     {
@@ -194,7 +195,7 @@ class Manager
             ]
         );
         if (!$updated) {
-            return new \WP_Error("error_replacing_secure_action", "Secure Action could not be updated");
+            return new WP_Error("error_updating_secure_action", "Secure Action could not be updated");
         }
 
         return $action;
@@ -204,12 +205,16 @@ class Manager
      * Get an action by its name
      *
      * @param $name
-     * @return false|Action|object|\WP_Error
+     * @return Action|WP_Error
      * @throws \Exception
      */
     public function getAction($name)
     {
-        return $this->query->get_item_by('name', $name);
+        $action = $this->query->get_item_by('name', $name);
+        if (!$action instanceof Action) {
+            return new WP_Error("error_getting_secure_action", "Secure Action could not be found");
+        }
+        return $action;
     }
 
     /**
@@ -218,7 +223,7 @@ class Manager
      *
      * @param string $key
      * @param null|string $info
-     * @return Action|string|\WP_Error
+     * @return Action|string|WP_Error
      * @throws \Exception
      */
     public function getActionDataByKey(string $key, ?string $info = null)
@@ -233,7 +238,12 @@ class Manager
                 return $id;
         }
 
-        return $this->query->get_item(intval($id));
+        $action = $this->query->get_item(intval($id));
+        if (!$action instanceof Action) {
+            return new WP_Error("error_getting_secure_action", "Secure Action could not be found");
+        }
+
+        return $action;
 
     }
 
@@ -271,7 +281,7 @@ class Manager
 
     /**
      * @param mixed|Action $action
-     * @return bool|Action|\WP_Error
+     * @return bool|Action|WP_Error
      * @throws \Exception
      */
     public function deleteAction($action)
@@ -285,7 +295,7 @@ class Manager
             if (is_wp_error($action)) {
                 return $action;
             }
-            return new \WP_Error('secure_action_delete', __('No valid action id or Action instance provided.'));
+            return new WP_Error('secure_action_delete', __('No valid action id or Action instance provided.'));
         }
 
         if (apply_filters('juvo_secure_actions_delete', $action->isPersistent() ? false : true, $action)) {
