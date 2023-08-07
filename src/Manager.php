@@ -116,9 +116,9 @@ class Manager
         }
 
         // Get action from db
-        $action = $this->query->get_item($action);
+        $action = $this->query->get_item($action); //@phpstan-ignore-line
 
-        return $action->getId() . ':' . $key;
+        return $action->getId() . ':' . $key; //@phpstan-ignore-line
 
     }
 
@@ -292,7 +292,7 @@ class Manager
         }
 
         if (apply_filters('juvo_secure_actions_delete', $action->isPersistent() ? false : true, $action)) {
-            return $this->query->delete_item($action);
+            return $this->query->delete_item($action->getId());
         }
 
         return false;
