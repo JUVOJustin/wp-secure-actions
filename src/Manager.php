@@ -22,6 +22,17 @@ class Manager
     {
 
         if (self::$instance == null) {
+
+            // Try to dynamically load action-scheduler
+            $position = strpos(__DIR__, '/vendor/');
+            if ($position !== false) {
+                $result = substr(__DIR__, 0, $position + 8); // +8 to include '/vendor/' in the final result
+                $result .= "woocommerce/action-scheduler/action-scheduler.php"; // Appending the new path
+                if (file_exists($result)) {
+                    require $result;
+                }
+            }
+            
             self::$instance = new Manager();
         }
 
