@@ -216,7 +216,7 @@ class Manager
         $updated = $this->query->update_item(
             $action->getId(),
             [
-                'count' => $action->getCount()
+                'exec_count' => $action->getCount()
             ]
         );
         if (!$updated) {
