@@ -90,22 +90,16 @@ class Manager
      */
     public function addAction(string $name, $callback, array $args = [], int $expiration = -1, int $limit = -1, bool $persistent = false, string $key = "")
     {
-        global $wp_hasher;
-
-        if (empty($wp_hasher)) {
-            require_once ABSPATH . 'wp-includes/class-phpass.php';
-            $wp_hasher = new \PasswordHash(8, true);
-        }
 
         // Generate key if none passed
         if (empty($key)) {
             $key = wp_generate_password(28, false);
         }
 
-        $password = $wp_hasher->HashPassword($key);
+        $hash = wp_hash_password( $key );
 
         $action = [
-            'password'   => $password,
+            'password'   => $hash,
             'name'       => $name,
             'callback'   => maybe_serialize($callback),
             'args'       => maybe_serialize($args),
@@ -135,8 +129,6 @@ class Manager
      */
     public function executeAction(string $key)
     {
-        global $wp_hasher;
-
         $action = $this->getActionDataByKey($key);
         if (!$action || is_wp_error($action)) {
             return $action;
@@ -144,12 +136,7 @@ class Manager
 
         $key = $this->getActionDataByKey($key, "key");
 
-        // Verify key
-        if (empty($wp_hasher)) {
-            require_once ABSPATH . 'wp-includes/class-phpass.php';
-            $wp_hasher = new \PasswordHash(8, true);
-        }
-        if (!$wp_hasher->CheckPassword($key, $action->getPassword())) {
+        if (!wp_check_password($key,$action->getPassword())) {
             return new WP_Error('invalid_key', __('The confirmation key is invalid for this secure action.', 'juvo_secure_actions'));
         }
 
@@ -179,6 +166,39 @@ class Manager
 
         return $result;
 
+    }
+
+    /**
+     * Use with caution: If the password is replaced the old password is invalidated.
+     *
+     * Replaces the password for an action. Useful if you want to get a working key again at a later point.
+     *
+     * @param Action $action
+     * @param string $key
+     * @return string|WP_Error
+     */
+    public function replacePassword(Action $action, string $key = "") {
+
+        // Generate key if none passed
+        if (empty($key)) {
+            $key = wp_generate_password(28, false);
+        }
+
+        $hash = wp_hash_password( $key );
+
+        // Returns fresh action´s id
+        $updated = $this->query->update_item($action->getId(), [
+            'password' => $hash
+        ]);
+
+        if (!$updated) {
+            return new WP_Error("error_updating_secure_action", "Secure action´s hash could not be updated");
+        }
+
+        // Get action from db
+        $action = $this->query->get_item($action->getId()); //@phpstan-ignore-line
+
+        return $action->getId() . ':' . $key; //@phpstan-ignore-line
     }
 
     /**
