@@ -10,7 +10,7 @@ This library allows you to create verifiable actions with an expiration date and
  - Secured download links to avoid direct file access
  - Double opt-in process
 
-Secure Actions uses its own database to avoid further pollution and cleans up after itself. 
+Secure Actions uses its own database table to avoid further pollution and cleans up after itself. 
 
 ## Installation
 Simply instantiate the `Manager` class as early as possible by adding the following snippet to your functions.php or  an early executed plugin file:
@@ -23,14 +23,15 @@ Secure Actions will take care it is only loaded once. It will automatically regi
 
 ## Usage
 
-| Parameter | Type | | Description
-|---|---|---|---|
-| `$name`| `string` | Required | Unique name to identify the action e.g. in filters |
-| `$callback`| `string` `array` | Required | Callback action to execution whenever the action is triggered. |
-| `$args` | `array` | Optional| The parameters to be passed to the callback, as an indexed array. Defaults to `array()`. |
-| `$expiration` | `int` | Optional| Action expiration interval in seconds. Defaults to `-1`. |
-| `$limit` | `int` | Optional | Action execution limit. Defaults to `-1`. |
-| `$persistent` | `bool` | Optional | Determines if an action should be deleted when expired or limit reached. Defaults to `false`. |
+| Parameter     | Type             | | Description                                                                                   
+|---------------|------------------|---|-----------------------------------------------------------------------------------------------|
+| `$name`       | `string`         | Required | Unique name to identify the action e.g. in filters                                            |
+| `$callback`   | `string` `array` | Required | Callback action to execution whenever the action is triggered.                                |
+| `$args`       | `array`          | Optional| The parameters to be passed to the callback, as an indexed array. Defaults to `array()`.      |
+| `$expiration` | `int`            | Optional| Action expiration interval in seconds. Defaults to `-1`.                                      |
+| `$limit`      | `int`            | Optional | Action execution limit. Defaults to `-1`.                                                     |
+| `$persistent` | `bool`           | Optional | Determines if an action should be deleted when expired or limit reached. Defaults to `false`. |
+| `key`         | `string`         | Optional | Sets the given password instead if choosing a random one                                      |
 
 
 ## Example
@@ -92,7 +93,7 @@ function ourCallbackFunction(WP_User $user, Action $action) {
 	wp_set_auth_cookie($user->ID, false);
 	do_action('wp_login', $user->user_login, $user);
 
-	// Manually increment count because function has no return value
+	// Manually increment count because this callback function has no return value
 	\juvo\WordPressSecureActions\Manager::getInstance()->incrementCount($action);
 
 	wp_safe_redirect(get_edit_profile_url($user->ID)); // Redirect to profile page
@@ -129,6 +130,24 @@ If you use the secure action URL feature, the user will be redirected to the fro
 ```php
 apply_filters( 'juvo_secure_actions_catch_action_redirect', $url, $action, $executionResult);
 ```
+## Security
+### 1. Key Generation and Storage:
+- **Unique Keys**: The library generates unique keys for each action using the WordPress core function `wp_generate_password()`. This ensures randomness and unpredictability for the keys, especially with a length of 28 characters.
+- **Hashing**: Before storing the key in the database, it is hashed using the WordPress `PasswordHash` class, which implements a portable PHP password hashing framework. This means the original key is never stored in plain text, further protecting against potential database breaches.
+- **Verification**: The hashed key is used for verification during the execution of actions, ensuring only the person with the original key can execute the given action.
+
+### 2. Action Execution Verifications:
+- **Key Validity**: During the execution of an action, the provided key is verified against the hashed key in the database. If there's a mismatch, the action will not proceed.
+- **Expiration**: Each action can have an expiration time. If an attempt is made to execute the action after its expiry, the attempt will be declined, and the action will be deleted.
+- **Execution Limits**: A limit can be set on the number of times an action can be executed. Once this limit is reached, further execution attempts are declined.
+- **Callback Integrity**: The library ensures the callback associated with the action is callable before proceeding with the execution. This prevents potential misconfigurations or tampered callback data from causing unexpected behaviors.
+
+### 3. Error Handling:
+- The library returns `WP_Error` objects in cases of execution failures, ensuring the end user gets a descriptive message about what went wrong without exposing sensitive system details.
+
+### 4. Recommendations:
+- **Key Storage**: Make sure, to never store the plain keys as they give direct access to the underlying process.
+- **Limit Persistent Actions**: The library provides an option for actions to persist even after reaching their limits or expiration. While this can be useful in certain scenarios, it's recommended to use this feature judiciously.
 
 ## Composer
 ```sh
