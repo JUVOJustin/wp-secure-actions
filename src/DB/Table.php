@@ -21,7 +21,7 @@ class Table extends \BerlinDB\Database\Table
      * @since 1.0.0
      * @var   string
      */
-    protected $db_version_key = 'secure_actions_1.0.0';
+    protected $db_version_key = 'secure_actions_db_version';
 
     /**
      * Optional description.
@@ -37,7 +37,7 @@ class Table extends \BerlinDB\Database\Table
      * @since 1.0.0
      * @var   mixed
      */
-    protected $version = 202308071328;
+    protected $version = '1.0.1';
 
     /**
      * Array of upgrade versions and methods.
@@ -47,7 +47,7 @@ class Table extends \BerlinDB\Database\Table
      * @var array
      */
     protected $upgrades = array(
-        '202308071328' => 202308071328,
+        '1.0.1' => 'upgrade_callback_1_0_1',
     );
 
     /**
@@ -80,7 +80,8 @@ class Table extends \BerlinDB\Database\Table
      *
      * @return bool True if upgrade was successful, false otherwise.
      */
-    protected function __202308071328() {
+    protected function upgrade_callback_1_0_1(): bool
+    {
 
         // Look for column
         $result = $this->column_exists( 'exec_count' );
